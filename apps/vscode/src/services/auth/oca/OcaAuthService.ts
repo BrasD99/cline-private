@@ -17,7 +17,6 @@ export class OcaAuthService {
 	protected _provider: OcaAuthProvider | null = null
 	protected _controller: Controller | null = null
 	protected _refreshInFlight: Promise<void> | null = null
-	protected _interactiveLoginPending = false
 	protected _activeAuthStatusUpdateSubscriptions = new Set<{
 		controller: Controller
 		responseStream: StreamingResponseHandler<OcaAuthState>
@@ -163,55 +162,7 @@ export class OcaAuthService {
 		}
 	}
 
-	async restoreRefreshTokenAndRetrieveAuthInfo(): Promise<void> {
-		const provider = this.requireProvider()
-		const ctrl = this.requireController()
-		try {
-			this._ocaAuthState = await provider.retrieveOcaAuthState(ctrl)
-			if (this._ocaAuthState) {
-				this._authenticated = true
-				await this.sendAuthStatusUpdate()
-				return
-			}
-			Logger.warn("No user found after restoring auth token")
-			await this.kickstartInteractiveLoginAsFallback()
-		} catch (error) {
-			Logger.error("Error restoring auth token:", error)
-			await this.kickstartInteractiveLoginAsFallback(error)
-		}
-	}
-
-	private async kickstartInteractiveLoginAsFallback(_err?: unknown): Promise<void> {
-		// Clear any stale secrets and broadcast unauthenticated state
-		this.clearAuth()
-		this._authenticated = false
-		this._ocaAuthState = null
-		await this.sendAuthStatusUpdate()
-
-		// Avoid repeated/looping login attempts
-		if (this._interactiveLoginPending) {
-			return
-		}
-		this._interactiveLoginPending = true
-		try {
-			// Kickstart interactive login (opens browser)
-			await this.createAuthRequest()
-			// Wait up to 60 seconds for user to complete login
-			const timeoutMs = 60_000
-			const pollMs = 250
-			const start = Date.now()
-			while (!this._authenticated && Date.now() - start < timeoutMs) {
-				await new Promise((r) => setTimeout(r, pollMs))
-			}
-			if (!this._authenticated) {
-				Logger.warn("Interactive OCA login timed out after 120 seconds")
-			}
-		} catch (e) {
-			Logger.error("Failed to initiate interactive OCA login:", e)
-		} finally {
-			this._interactiveLoginPending = false
-		}
-	}
+	async restoreRefreshTokenAndRetrieveAuthInfo(): Promise<void> {}
 
 	async subscribeToAuthStatusUpdate(
 		_request: EmptyRequest,

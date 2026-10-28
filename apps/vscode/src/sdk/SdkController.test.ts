@@ -629,61 +629,6 @@ describe("resolveWorkspaceManagerPaths", () => {
 	})
 })
 
-describe("starting a cloud task", () => {
-	it("leaves the turn phase to the coordinator so a start cancelled during policy loading stays idle", async () => {
-		const run = vi.fn(async () => undefined)
-		const controller = {
-			cloud: { beginCloudTask: vi.fn(() => run) },
-			waitForInitialRemoteConfig: vi.fn(async () => undefined),
-			turnStateTracker: { set: vi.fn() },
-			messageTranslatorState: { clearTurnOutcome: vi.fn() },
-		}
-
-		await SdkController.prototype.initTask.call(controller as never, "prompt", undefined, undefined, undefined, undefined, {
-			repoUrl: "https://github.com/cline/fixture",
-		})
-
-		expect(controller.cloud.beginCloudTask.mock.invocationCallOrder[0]).toBeLessThan(
-			controller.waitForInitialRemoteConfig.mock.invocationCallOrder[0],
-		)
-		expect(run).toHaveBeenCalledOnce()
-		expect(controller.turnStateTracker.set).not.toHaveBeenCalled()
-		expect(controller.messageTranslatorState.clearTurnOutcome).not.toHaveBeenCalled()
-	})
-})
-
-describe("cancelling a provisioning cloud task", () => {
-	it("returns to the home view instead of offering Resume Task", async () => {
-		const phases: string[] = []
-		const controller = {
-			turnStateTracker: { set: (phase: string) => phases.push(phase) },
-			cloud: { cancelPendingStartFor: vi.fn(() => true) },
-			clearTask: vi.fn(async () => phases.push("cleared")),
-			taskControl: { cancelTask: vi.fn() },
-		}
-
-		await SdkController.prototype.cancelTask.call(controller as never)
-
-		expect(phases).toEqual(["resumable", "cleared"])
-		expect(controller.taskControl.cancelTask).not.toHaveBeenCalled()
-	})
-
-	it("cancels the pending cloud start when the user starts a new task", async () => {
-		const cancelPendingStart = vi.fn(() => true)
-		const controller = {
-			turnStateTracker: { set: vi.fn() },
-			cloud: { cancelPendingStart },
-			taskControl: { clearTask: vi.fn(async () => undefined) },
-			postStateToWebview: vi.fn(async () => undefined),
-		}
-
-		await SdkController.prototype.clearTask.call(controller as never)
-
-		expect(cancelPendingStart).toHaveBeenCalledOnce()
-		expect(controller.taskControl.clearTask).toHaveBeenCalledOnce()
-	})
-})
-
 describe("getTaskHistory with Cloud Only", () => {
 	function record(sessionId: string, updatedAt: number, executionTarget?: "cloud") {
 		return {

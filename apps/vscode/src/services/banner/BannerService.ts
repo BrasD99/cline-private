@@ -1,6 +1,5 @@
-import type { Banner, BannerAction, BannerRules } from "@shared/ClineBanner"
+import type { Banner, BannerAction } from "@shared/ClineBanner"
 import { BannerActionType, type BannerCardData } from "@shared/cline/banner"
-import { ClineEnv } from "@/config"
 import { Controller } from "@/core/controller"
 import { StateManager } from "@/core/storage/StateManager"
 import { HostInfo, HostRegistryInfo } from "@/registry"
@@ -9,28 +8,7 @@ import { Logger } from "@/shared/services/Logger"
 import { featureFlagsService } from "../feature-flags"
 
 const DEFAULT_CACHE_DURATION_MS = 24 * 60 * 60 * 1000
-const CIRCUIT_BREAKER_TIMEOUT_MS = 60 * 60 * 1000 // 1 hour
-const SERVER_ERROR_BACKOFF_MS = 15 * 60 * 1000 // 15 minutes
 const AUTH_DEBOUNCE_MS = 1000 // 1 second
-const MAX_CONSECUTIVE_FAILURES = 3
-
-const OS_MAP: Record<string, string> = {
-	win32: "windows",
-	linux: "linux",
-	darwin: "macos",
-}
-
-const IDE_MAP: Record<string, string> = {
-	vscode: "vscode",
-	jetbrains: "jetbrains",
-	cli: "cli",
-}
-
-const PROVIDER_ALIASES: Record<string, string[]> = {
-	anthropic: ["anthropic", "claude-code"],
-	openai: ["openai", "openai-native"],
-	qwen: ["qwen", "qwen-code"],
-}
 
 /**
  * Service for fetching and evaluating banner messages
@@ -54,10 +32,7 @@ export class BannerService {
 
 	private readonly validActionTypes: Set<string>
 
-	private constructor(
-		private readonly controller: Controller,
-		private readonly hostInfo: HostInfo,
-	) {
+	private constructor(_controller: Controller, _hostInfo: HostInfo) {
 		this.validActionTypes = new Set(Object.values(BannerActionType))
 		Logger.log("[BannerService] initialized")
 	}
@@ -259,95 +234,6 @@ export class BannerService {
 
 	private async doFetch(): Promise<Banner[]> {
 		return []
-	}
-
-	private handleFetchError(error: unknown): void {
-		this.consecutiveFailures++
-
-		const typedError = error as { status?: number; headers?: { get(name: string): string | null } }
-		const status = typedError.status
-
-		let backoffMs = CIRCUIT_BREAKER_TIMEOUT_MS
-
-		if (status === 429) {
-			const retryAfter = typedError.headers?.get("retry-after")
-			if (retryAfter) {
-				const seconds = Number.parseInt(retryAfter, 10)
-				if (!Number.isNaN(seconds)) {
-					backoffMs = seconds * 1000
-				} else {
-					const date = new Date(retryAfter)
-					if (!Number.isNaN(date.getTime())) {
-						backoffMs = Math.max(0, date.getTime() - Date.now())
-					}
-				}
-			}
-		} else if (status && status >= 500 && status < 600) {
-			backoffMs = SERVER_ERROR_BACKOFF_MS
-		}
-
-		this.backoffUntil = Date.now() + backoffMs
-
-		if (this.consecutiveFailures >= MAX_CONSECUTIVE_FAILURES) {
-			this.backoffUntil = Date.now() + CIRCUIT_BREAKER_TIMEOUT_MS
-			const msg =
-				this.consecutiveFailures === MAX_CONSECUTIVE_FAILURES ? "Circuit breaker tripped" : "Half-open recovery failed"
-			Logger.log(`BannerService: ${msg}, will allow recovery attempt after 1 hour`)
-		}
-
-		Logger.error(
-			`[BannerService] Failed ${this.consecutiveFailures}/${MAX_CONSECUTIVE_FAILURES}. ` +
-				`Backing off for ${Math.ceil(backoffMs / 60000)} minutes`,
-			error,
-		)
-	}
-
-	private buildFetchUrl(): string {
-		const url = new URL("/banners/v2/messages", ClineEnv.config().apiBaseUrl)
-		url.searchParams.set("ide", this.getIdeType())
-		url.searchParams.set("extension_version", this.hostInfo.extensionVersion)
-		url.searchParams.set("os", OS_MAP[this.hostInfo.os] || "unknown")
-		return url.toString()
-	}
-
-	private getIdeType(): string {
-		const ide = this.hostInfo.ide?.toLowerCase() ?? ""
-		for (const [key, value] of Object.entries(IDE_MAP)) {
-			if (ide.includes(key)) return value
-		}
-
-		const platform = this.hostInfo.platform?.toLowerCase() ?? ""
-		if (platform.includes("visual studio") || platform.includes("vscode")) {
-			return "vscode"
-		}
-		return "unknown"
-	}
-
-	private matchesProviderRule(banner: Banner): boolean {
-		try {
-			const rules: BannerRules = JSON.parse(banner.rulesJson || "{}")
-			if (!rules?.providers?.length) return true
-
-			const config = StateManager.get().getApiConfiguration()
-			const mode = StateManager.get().getGlobalSettingsKey("mode")
-			const provider = mode === "plan" ? config?.planModeApiProvider : config?.actModeApiProvider
-
-			return rules.providers.some((ruleProvider) => {
-				// Check if ruleProvider is an alias for the selected provider
-				for (const [_, aliases] of Object.entries(PROVIDER_ALIASES)) {
-					if (aliases.includes(ruleProvider)) {
-						return aliases.includes(provider as string)
-					}
-				}
-				return provider === ruleProvider
-			})
-		} catch (error) {
-			Logger.log(
-				`[BannerService] Error parsing provider rules for banner ${banner.id}: ` +
-					`${error instanceof Error ? error.message : String(error)}`,
-			)
-			return true // Fail open
-		}
 	}
 
 	private getBannerActions(banner: Banner): BannerAction[] {

@@ -1,21 +1,7 @@
-import type { OpenTelemetryClientValidConfig } from "@/shared/services/config/otel-config"
 import { Logger } from "@/shared/services/Logger"
 import type { ITelemetryProvider, TelemetryProperties, TelemetrySettings } from "./providers/ITelemetryProvider"
 
-/**
- * Configuration for telemetry providers
- */
-export type TelemetryProviderConfig =
-	| { type: "posthog"; apiKey?: string; host?: string }
-	/** OpenTelemetry collector
-	 * @param config - Config for this specific collector
-	 * @param bypassUserSettings - When true, telemetry is sent regardless of the user's Cline telemetry opt-in/opt-out settings.
-	 * This is used for:
-	 * 	- User-controlled collectors configured via environment variables (e.g., CLINE_OTEL_TELEMETRY_ENABLED).
-	 * 	- Organization-controlled collectors configured via remote config.
-	 */
-	| { type: "opentelemetry"; config: OpenTelemetryClientValidConfig; bypassUserSettings: boolean }
-	| { type: "no-op" }
+export type TelemetryProviderConfig = { type: "no-op" }
 
 /**
  * Factory class for creating telemetry providers

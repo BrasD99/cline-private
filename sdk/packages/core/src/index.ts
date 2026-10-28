@@ -122,31 +122,6 @@ export {
 } from "@cline/shared";
 export * from "@cline/shared/storage";
 export {
-	type ClineAccountBalance,
-	type ClineAccountOperations,
-	type ClineAccountOrganization,
-	type ClineAccountOrganizationBalance,
-	type ClineAccountOrganizationUsageTransaction,
-	type ClineAccountPaymentTransaction,
-	ClineAccountService,
-	type ClineAccountServiceOptions,
-	type ClineAccountTelemetryIdentity,
-	type ClineAccountUsageTransaction,
-	type ClineAccountUser,
-	type ClineOrganization,
-	type ClineSubscriptionPlan,
-	executeClineAccountAction,
-	type FeaturebaseTokenResponse,
-	isClineAccountActionRequest,
-	type ProviderActionExecutor,
-	persistClineAccountTelemetryIdentity,
-	RpcClineAccountService,
-	resolveClineAccountTelemetryIdentity,
-	type UserCurrentPlan,
-	type UserRemoteConfigOrganization,
-	type UserRemoteConfigResponse,
-} from "./account";
-export {
 	createOAuthClientCallbacks,
 	type OAuthClientCallbacksOptions,
 } from "./auth/client";
@@ -953,8 +928,6 @@ export async function loadOpenTelemetryAdapter() {
 	return import("./services/telemetry/index.js");
 }
 export { Agent, createAgentRuntime } from "@cline/agents";
-export type { ConnectorsRequest } from "./extensions/composio/composio-meta-tools";
-export { resolveComposioConnectionStatePath } from "./extensions/composio/composio-tools-extension";
 export {
 	createCompactionStateAwarePrepareTurn,
 	createContextCompactionPrepareTurn,

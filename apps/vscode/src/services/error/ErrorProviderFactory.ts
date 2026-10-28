@@ -1,19 +1,9 @@
-import type { PostHogClientConfig } from "@/shared/services/config/posthog-config"
 import { Logger } from "@/shared/services/Logger"
 import { ClineError } from "./ClineError"
 import { IErrorProvider } from "./providers/IErrorProvider"
 
-/**
- * Supported error provider types
- */
-type ErrorProviderType = "posthog" | "no-op"
-
-/**
- * Configuration for error providers
- */
 export interface ErrorProviderConfig {
-	type: ErrorProviderType
-	config: PostHogClientConfig
+	type: "no-op"
 }
 
 /**
@@ -35,10 +25,7 @@ export class ErrorProviderFactory {
 	 * @returns Default configuration using PostHog, or no-op for self-hosted mode
 	 */
 	public static getDefaultConfig(): ErrorProviderConfig {
-		return {
-			type: "no-op",
-			config: { host: "", uiHost: "" },
-		}
+		return { type: "no-op" }
 	}
 }
 

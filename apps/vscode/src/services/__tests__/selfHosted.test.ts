@@ -28,14 +28,12 @@ describe("SelfHosted Mode - PostHog Disabling", () => {
 			assert.strictEqual(config.type, "no-op", "Should return no-op type in selfHosted mode")
 		})
 
-		it("should return posthog config when NOT in selfHosted mode (if PostHog config is valid)", () => {
+		it("should return no-op config when NOT in selfHosted mode", () => {
 			isSelfHostedStub = sinon.stub(ClineEndpoint, "isSelfHosted").returns(false)
 
 			const config = FeatureFlagsProviderFactory.getDefaultConfig()
 
-			// Will be "posthog" if PostHog config is valid, "no-op" otherwise
-			// The important thing is it's NOT forced to "no-op" by selfHosted check
-			assert.ok(config.type === "posthog" || config.type === "no-op", "Should not be forced to no-op")
+			assert.strictEqual(config.type, "no-op", "Feature flags stay disabled")
 		})
 
 		it("should create NoOp provider when in selfHosted mode", () => {

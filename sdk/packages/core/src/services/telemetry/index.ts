@@ -9,10 +9,6 @@ export type {
 	TelemetryValue,
 } from "./ITelemetryAdapter";
 export {
-	OpenTelemetryAdapter,
-	type OpenTelemetryAdapterOptions,
-} from "./OpenTelemetryAdapter";
-export {
 	type ConfiguredTelemetryHandle,
 	type CreateOpenTelemetryTelemetryServiceOptions,
 	createConfiguredTelemetryHandle,

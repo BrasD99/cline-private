@@ -3,10 +3,9 @@ import { useCallback, useEffect } from "react"
 import ChatView from "./components/chat/ChatView"
 import HistoryView from "./components/history/HistoryView"
 import McpView from "./components/mcp/configuration/McpConfigurationView"
-import OnboardingView from "./components/onboarding/OnboardingView"
 import SettingsView from "./components/settings/SettingsView"
+import WelcomeView from "./components/welcome/WelcomeView"
 import WorktreesView from "./components/worktrees/WorktreesView"
-import { useClineAuth } from "./context/ClineAuthContext"
 import { useExtensionState } from "./context/ExtensionStateContext"
 import { Providers } from "./Providers"
 import { UiServiceClient } from "./services/grpc-client"
@@ -33,8 +32,6 @@ const AppContent = () => {
 		hideAnnouncement,
 	} = useExtensionState()
 
-	const { accountSwitch, accountSwitchError } = useClineAuth()
-
 	const showUpdateAnnouncementModal = useCallback(() => {
 		setShowAnnouncement(true)
 		UiServiceClient.onDidShowAnnouncement({} as EmptyRequest)
@@ -58,20 +55,11 @@ const AppContent = () => {
 	}
 
 	if (showWelcome) {
-		return <OnboardingView />
+		return <WelcomeView />
 	}
 
 	return (
 		<div className="flex h-screen w-full flex-col">
-			{(accountSwitch || accountSwitchError) && (
-				<div className="z-50 bg-editor-background p-2 text-xs" role="status">
-					{accountSwitch
-						? accountSwitch.slow
-							? "Account switch is still pending. You can navigate while it finishes."
-							: "Switching account…"
-						: `Could not confirm account switch: ${accountSwitchError}`}
-				</div>
-			)}
 			{showSettings && <SettingsView navigationRequest={settingsNavigationRequest} onDone={hideSettings} />}
 			{showHistory && <HistoryView onDone={hideHistory} />}
 			{showMcp && <McpView initialTab={mcpTab} onDone={closeMcpView} />}

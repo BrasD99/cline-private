@@ -4,7 +4,7 @@ import type { FeatureFlagsAndPayloads, IFeatureFlagsProvider } from "./providers
 /**
  * Supported feature flags provider types
  */
-type FeatureFlagsProviderType = "posthog" | "no-op"
+type FeatureFlagsProviderType = "no-op"
 
 /**
  * Configuration for feature flags providers

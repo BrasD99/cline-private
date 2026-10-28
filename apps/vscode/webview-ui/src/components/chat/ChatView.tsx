@@ -54,7 +54,6 @@ const ChatView = ({ isHidden, showAnnouncement, hideAnnouncement, showHistoryVie
 		taskHistory,
 		telemetrySetting,
 		mode,
-		userInfo,
 		hooksEnabled,
 		checkpointRestoreInput,
 		queuedPrompts,
@@ -63,7 +62,7 @@ const ChatView = ({ isHidden, showAnnouncement, hideAnnouncement, showHistoryVie
 		cloudTaskTarget,
 		currentCloudTask,
 	} = useExtensionState()
-	const isProdHostedApp = userInfo?.apiBaseUrl === "https://app.cline.bot"
+	const isProdHostedApp = false
 	const shouldShowQuickWins = isProdHostedApp && (!taskHistory || taskHistory.length < QUICK_WINS_HISTORY_THRESHOLD)
 
 	// Use custom hooks for state management

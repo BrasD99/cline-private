@@ -8,9 +8,8 @@ const __dirname = path.dirname(__filename)
 
 const production = process.argv.includes("--production") || process.env["IS_DEBUG_BUILD"] === "false"
 const watch = process.argv.includes("--watch")
-const standalone = process.argv.includes("--standalone")
 const e2eBuild = process.argv.includes("--e2e-build")
-const destDir = standalone ? "dist-standalone" : "dist"
+const destDir = "dist"
 
 /**
  * @type {import('esbuild').Plugin}
@@ -87,7 +86,7 @@ const esbuildProblemMatcherPlugin = {
 
 const buildEnvVars = {
 	"import.meta.url": "_importMetaUrl",
-	"process.env.IS_STANDALONE": JSON.stringify(standalone ? "true" : "false"),
+	"process.env.IS_STANDALONE": JSON.stringify("false"),
 	// Always inline these values so ordinary builds cannot be mislabeled by a
 	// user's runtime environment. Only the combined rollout workflow sets them.
 	"process.env.CLINE_ROLLOUT_VARIANT": JSON.stringify(process.env.CLINE_ROLLOUT_VARIANT || ""),
@@ -97,49 +96,8 @@ if (production) {
 	// IS_DEV is always disable in production builds.
 	buildEnvVars["process.env.IS_DEV"] = "false"
 }
-// Set the environment and telemetry env vars. The API key env vars need to be populated in the GitHub
-// workflows from the secrets.
 if (process.env.CLINE_ENVIRONMENT) {
 	buildEnvVars["process.env.CLINE_ENVIRONMENT"] = JSON.stringify(process.env.CLINE_ENVIRONMENT)
-}
-if (process.env.TELEMETRY_SERVICE_API_KEY) {
-	buildEnvVars["process.env.TELEMETRY_SERVICE_API_KEY"] = JSON.stringify(process.env.TELEMETRY_SERVICE_API_KEY)
-}
-if (process.env.ERROR_SERVICE_API_KEY) {
-	buildEnvVars["process.env.ERROR_SERVICE_API_KEY"] = JSON.stringify(process.env.ERROR_SERVICE_API_KEY)
-}
-
-// OpenTelemetry configuration (injected at build time from GitHub secrets)
-// These provide production defaults that can be overridden at runtime via environment variables
-if (process.env.OTEL_TELEMETRY_ENABLED) {
-	buildEnvVars["process.env.OTEL_TELEMETRY_ENABLED"] = JSON.stringify(process.env.OTEL_TELEMETRY_ENABLED)
-}
-if (process.env.OTEL_LOGS_EXPORTER) {
-	buildEnvVars["process.env.OTEL_LOGS_EXPORTER"] = JSON.stringify(process.env.OTEL_LOGS_EXPORTER)
-}
-if (process.env.OTEL_METRICS_EXPORTER) {
-	buildEnvVars["process.env.OTEL_METRICS_EXPORTER"] = JSON.stringify(process.env.OTEL_METRICS_EXPORTER)
-}
-if (process.env.OTEL_TRACES_EXPORTER) {
-	buildEnvVars["process.env.OTEL_TRACES_EXPORTER"] = JSON.stringify(process.env.OTEL_TRACES_EXPORTER)
-}
-if (process.env.CLINE_TRACE_SAMPLE_PERCENT) {
-	buildEnvVars["process.env.CLINE_TRACE_SAMPLE_PERCENT"] = JSON.stringify(process.env.CLINE_TRACE_SAMPLE_PERCENT)
-}
-if (process.env.CLINE_TRACE_RECORD_CONTENT) {
-	buildEnvVars["process.env.CLINE_TRACE_RECORD_CONTENT"] = JSON.stringify(process.env.CLINE_TRACE_RECORD_CONTENT)
-}
-if (process.env.OTEL_EXPORTER_OTLP_PROTOCOL) {
-	buildEnvVars["process.env.OTEL_EXPORTER_OTLP_PROTOCOL"] = JSON.stringify(process.env.OTEL_EXPORTER_OTLP_PROTOCOL)
-}
-if (process.env.OTEL_EXPORTER_OTLP_ENDPOINT) {
-	buildEnvVars["process.env.OTEL_EXPORTER_OTLP_ENDPOINT"] = JSON.stringify(process.env.OTEL_EXPORTER_OTLP_ENDPOINT)
-}
-if (process.env.OTEL_EXPORTER_OTLP_HEADERS) {
-	buildEnvVars["process.env.OTEL_EXPORTER_OTLP_HEADERS"] = JSON.stringify(process.env.OTEL_EXPORTER_OTLP_HEADERS)
-}
-if (process.env.OTEL_METRIC_EXPORT_INTERVAL) {
-	buildEnvVars["process.env.OTEL_METRIC_EXPORT_INTERVAL"] = JSON.stringify(process.env.OTEL_METRIC_EXPORT_INTERVAL)
 }
 // Base configuration shared between extension and standalone builds
 const baseConfig = {
@@ -171,16 +129,6 @@ const extensionConfig = {
 	external: ["vscode"],
 }
 
-// Standalone-specific configuration
-const standaloneConfig = {
-	...baseConfig,
-	entryPoints: ["src/standalone/cline-core.ts"],
-	outfile: `${destDir}/cline-core.js`,
-	// These modules need to load files from the module directory at runtime,
-	// so they cannot be bundled.
-	external: ["vscode", "@grpc/reflection", "grpc-health-check", "better-sqlite3"],
-}
-
 // E2E build script configuration
 const e2eBuildConfig = {
 	...baseConfig,
@@ -203,7 +151,7 @@ function copyPluginRuntime() {
 }
 
 async function main() {
-	const config = standalone ? standaloneConfig : e2eBuild ? e2eBuildConfig : extensionConfig
+	const config = e2eBuild ? e2eBuildConfig : extensionConfig
 	if (!e2eBuild) copyPluginRuntime()
 	const extensionCtx = await esbuild.context(config)
 	if (watch) {

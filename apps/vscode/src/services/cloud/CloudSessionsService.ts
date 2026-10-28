@@ -88,6 +88,9 @@ export class CloudSessionsService {
 
 	/** WebSocket endpoint the sandbox's Hub is proxied on. */
 	sessionSocketUrl(sessionId: string): string {
+		if (!this.apiBaseUrl) {
+			return ""
+		}
 		const url = new URL(`/api/v1/session/${encodeURIComponent(sessionId)}`, this.apiBaseUrl)
 		url.protocol = url.protocol === "http:" ? "ws:" : "wss:"
 		return url.toString()
@@ -108,6 +111,9 @@ export class CloudSessionsService {
 	}
 
 	private async withApi<T>(operation: (api: CloudSessionApi) => Promise<T>): Promise<T> {
+		if (!this.apiBaseUrl) {
+			throw new CloudSessionError("request_failed", "Cloud sessions are disabled.")
+		}
 		const api = new CloudSessionApi({
 			apiBaseUrl: this.apiBaseUrl,
 			appBaseUrl: this.appBaseUrl,
@@ -165,6 +171,9 @@ export class CloudSessionsService {
 
 	/** Resolves the GitHub App install URL (the API answers with a redirect to github.com). */
 	async getGitHubInstallUrl(): Promise<string> {
+		if (!this.apiBaseUrl) {
+			throw new CloudSessionError("request_failed", "Cloud sessions are disabled.")
+		}
 		const token = await this.requireToken()
 		const installUrl = new URL("/api/v1/integrations/github/install", this.apiBaseUrl)
 		installUrl.searchParams.set("redirect", new URL("/dashboard/integrations", this.appBaseUrl).toString())
@@ -198,6 +207,9 @@ export class CloudSessionsService {
 	// ---- Sessions ----
 
 	async listSessions(): Promise<CloudSessionRecord[]> {
+		if (!this.apiBaseUrl) {
+			return []
+		}
 		const orgId = this.options.getActiveOrganizationId()?.trim()
 		return this.withApi((api) => api.list(orgId))
 	}

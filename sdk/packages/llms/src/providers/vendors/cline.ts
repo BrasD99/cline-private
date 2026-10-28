@@ -235,7 +235,7 @@ export async function createClineProviderModule(
 ): Promise<ProviderFactoryResult> {
 	const providerOptions: ClineProviderOptions = {
 		apiKey: await resolveApiKey(config),
-		baseURL: config.baseUrl ?? "https://api.cline.bot/api/v1",
+		baseURL: config.baseUrl ?? "",
 		headers: config.headers,
 		fetch: config.fetch,
 		onResponseError: readResponseErrorHandler(config),

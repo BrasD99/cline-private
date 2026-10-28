@@ -1,21 +1,17 @@
-import type { Banner, BannerAction, BannerRules, BannersResponse } from "@shared/ClineBanner"
+import type { Banner, BannerAction, BannerRules } from "@shared/ClineBanner"
 import { BannerActionType, type BannerCardData } from "@shared/cline/banner"
 import { ClineEnv } from "@/config"
 import { Controller } from "@/core/controller"
 import { StateManager } from "@/core/storage/StateManager"
 import { HostInfo, HostRegistryInfo } from "@/registry"
-import { fetch } from "@/shared/net"
 import { FeatureFlag } from "@/shared/services/feature-flags/feature-flags"
 import { Logger } from "@/shared/services/Logger"
-import { AuthService } from "../auth/AuthService"
-import { buildBasicClineHeaders } from "../EnvUtils"
 import { featureFlagsService } from "../feature-flags"
 
 const DEFAULT_CACHE_DURATION_MS = 24 * 60 * 60 * 1000
 const CIRCUIT_BREAKER_TIMEOUT_MS = 60 * 60 * 1000 // 1 hour
 const SERVER_ERROR_BACKOFF_MS = 15 * 60 * 1000 // 15 minutes
 const AUTH_DEBOUNCE_MS = 1000 // 1 second
-const FETCH_TIMEOUT_MS = 10000 // 10 seconds
 const MAX_CONSECUTIVE_FAILURES = 3
 
 const OS_MAP: Record<string, string> = {
@@ -249,36 +245,7 @@ export class BannerService {
 		}
 	}
 
-	public async sendBannerEvent(bannerId: string, eventType: "dismiss"): Promise<void> {
-		try {
-			const url = new URL("/banners/v2/messages", ClineEnv.config().apiBaseUrl).toString()
-			const ideType = this.getIdeType()
-			const surface = ideType === "cli" ? "cli" : ideType === "jetbrains" ? "jetbrains" : "vscode"
-
-			const controller = new AbortController()
-			const timeoutId = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS)
-
-			await fetch(url, {
-				method: "POST",
-				headers: {
-					"Content-Type": "application/json",
-					...(await buildBasicClineHeaders()),
-				},
-				body: JSON.stringify({
-					banner_id: bannerId,
-					instance_id: this.hostInfo.distinctId,
-					surface,
-					event_type: eventType,
-				}),
-				signal: controller.signal,
-			})
-
-			clearTimeout(timeoutId)
-			Logger.log(`[BannerService] Sent ${eventType} event for banner ${bannerId}`)
-		} catch (error) {
-			Logger.error("[BannerService] Error sending banner event", error)
-		}
-	}
+	public async sendBannerEvent(_bannerId: string, _eventType: "dismiss"): Promise<void> {}
 
 	public isBannerDismissed(bannerId: string): boolean {
 		try {
@@ -291,77 +258,7 @@ export class BannerService {
 	}
 
 	private async doFetch(): Promise<Banner[]> {
-		// Do not fetch banners when feature flag is off
-		if (!featureFlagsService.getBooleanFlagEnabled(FeatureFlag.REMOTE_BANNERS)) {
-			return []
-		}
-
-		this.abortController = new AbortController()
-		const { signal } = this.abortController
-		const timeoutId = setTimeout(() => this.abortController?.abort(), FETCH_TIMEOUT_MS)
-
-		try {
-			const url = this.buildFetchUrl()
-			const headers: Record<string, string> = {
-				"Content-Type": "application/json",
-				...(await buildBasicClineHeaders()),
-			}
-			const authToken = await AuthService.getInstance().getAuthToken()
-			if (authToken) {
-				headers.Authorization = `Bearer ${authToken}`
-			}
-
-			const response = await fetch(url, { method: "GET", headers, signal })
-			clearTimeout(timeoutId)
-
-			if (!response.ok) {
-				throw Object.assign(new Error(`HTTP ${response.status}`), {
-					status: response.status,
-					headers: response.headers,
-				})
-			}
-
-			const data = (await response.json()) as BannersResponse
-			if (!data?.data?.items || !Array.isArray(data.data.items)) {
-				Logger.log("BannerService: Invalid response format")
-				return []
-			}
-
-			Logger.log(
-				`[BannerService] Raw API response: ${data.data.items.length} items: ${JSON.stringify(
-					data.data.items.map((b) => ({ id: b.id, placement: b.placement, titleMd: b.titleMd?.substring(0, 50) })),
-				)}`,
-			)
-
-			const banners = data.data.items.filter((b) => this.matchesProviderRule(b))
-			this.cachedBanners = banners
-			this.lastFetchTime = Date.now()
-			this.consecutiveFailures = 0
-
-			Logger.log(
-				`[BannerService] After provider filter: ${banners.length} banners: ${JSON.stringify(
-					banners.map((b) => ({ id: b.id, placement: b.placement })),
-				)}`,
-			)
-
-			this.controller.postStateToWebview().catch((error) => {
-				Logger.error("Failed to post state to webview after fetching banners:", error)
-			})
-
-			Logger.log(`[BannerService] Fetched ${banners.length} banner(s) at ${new Date(this.lastFetchTime).toISOString()}`)
-			return banners
-		} catch (error) {
-			clearTimeout(timeoutId)
-
-			if (error instanceof Error && error.name === "AbortError") {
-				return this.cachedBanners
-			}
-
-			this.handleFetchError(error)
-			return this.cachedBanners
-		} finally {
-			this.abortController = null
-		}
+		return []
 	}
 
 	private handleFetchError(error: unknown): void {

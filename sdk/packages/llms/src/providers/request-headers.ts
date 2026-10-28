@@ -106,13 +106,12 @@ function deriveOpenAICodexAccountId(
 ): string | undefined {
 	const payload = decodeJwtPayload(accessToken) as
 		| {
-				"https://api.openai.com/auth"?: { chatgpt_account_id?: string };
 				organizations?: Array<{ id?: string }>;
 				chatgpt_account_id?: string;
+				chatgpt_account?: { chatgpt_account_id?: string };
 		  }
 		| undefined;
-	const authAccountId =
-		payload?.["https://api.openai.com/auth"]?.chatgpt_account_id;
+	const authAccountId = payload?.chatgpt_account?.chatgpt_account_id;
 	if (typeof authAccountId === "string" && authAccountId.length > 0) {
 		return authAccountId;
 	}

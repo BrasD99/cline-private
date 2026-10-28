@@ -171,7 +171,7 @@ interface IdTokenClaims {
 	chatgpt_account_id?: string
 	organizations?: Array<{ id: string }>
 	email?: string
-	"https://api.openai.com/auth"?: {
+	chatgpt_account?: {
 		chatgpt_account_id?: string
 	}
 }
@@ -196,11 +196,11 @@ function parseJwtClaims(token: string): IdTokenClaims | undefined {
  * Extract ChatGPT account ID from JWT claims
  * Checks multiple locations:
  * 1. Root-level chatgpt_account_id
- * 2. Nested under https://api.openai.com/auth
+ * 2. Nested account claim
  * 3. First organization ID
  */
 function extractAccountIdFromClaims(claims: IdTokenClaims): string | undefined {
-	return claims.chatgpt_account_id || claims["https://api.openai.com/auth"]?.chatgpt_account_id || claims.organizations?.[0]?.id
+	return claims.chatgpt_account_id || claims.chatgpt_account?.chatgpt_account_id || claims.organizations?.[0]?.id
 }
 
 /**

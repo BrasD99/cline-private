@@ -2,9 +2,7 @@ import { type EmptyRequest, String as ProtoString } from "@shared/proto/cline/co
 import { OcaAuthState, OcaUserInfo } from "@shared/proto/cline/oca_account"
 import type { Controller } from "@/core/controller"
 import { getRequestRegistry, type StreamingResponseHandler } from "@/core/controller/grpc-handler"
-import { AuthHandler } from "@/hosts/external/AuthHandler"
 import { Logger } from "@/shared/services/Logger"
-import { openExternal } from "@/utils/env"
 import { LogoutReason } from "../types"
 import { OcaAuthProvider } from "./providers/OcaAuthProvider"
 import type { OcaConfig } from "./utils/types"
@@ -130,27 +128,7 @@ export class OcaAuthService {
 	}
 
 	async createAuthRequest(): Promise<ProtoString> {
-		this.requireController()
-		if (this._authenticated) {
-			this.sendAuthStatusUpdate()
-			return ProtoString.create({ value: "Already authenticated" })
-		}
-		const ocaMode = this.requireController().stateManager.getGlobalSettingsKey("ocaMode") || "internal"
-		const idcsUrl = ocaMode === "external" ? this._config.external.idcs_url : this._config.internal.idcs_url
-		if (!idcsUrl) {
-			throw new Error("IDCS URI is not configured")
-		}
-		// Start the auth handler
-		const authHandler = AuthHandler.getInstance()
-		authHandler.setEnabled(true)
-		const callbackUrl = await authHandler.getCallbackUrl("/auth/oca")
-		const authUrl = this.requireProvider().getAuthUrl(callbackUrl!, ocaMode)
-		const authUrlString = authUrl?.toString() || ""
-		if (!authUrlString) {
-			throw new Error("Failed to generate authentication URL")
-		}
-		await openExternal(authUrlString)
-		return ProtoString.create({ value: authUrlString })
+		throw new Error("Oracle Code Assist login is disabled")
 	}
 
 	async handleDeauth(_: LogoutReason = LogoutReason.UNKNOWN): Promise<void> {
@@ -181,8 +159,7 @@ export class OcaAuthService {
 			Logger.error("Error signing in with custom token:", error)
 			throw error
 		} finally {
-			const authHandler = AuthHandler.getInstance()
-			authHandler.setEnabled(false)
+			// External callback server is not used.
 		}
 	}
 

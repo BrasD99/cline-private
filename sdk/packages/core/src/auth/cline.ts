@@ -35,7 +35,7 @@ const DEFAULT_WORKOS_ENDPOINTS = {
 	authenticate: "/user_management/authenticate",
 } as const;
 
-const DEFAULT_WORKOS_API_BASE_URL = "https://api.workos.com";
+const DEFAULT_WORKOS_API_BASE_URL = "";
 const DEFAULT_CALLBACK_PATH = "/auth";
 const DEFAULT_CALLBACK_PORTS = Array.from(
 	{ length: 11 },
@@ -340,7 +340,7 @@ async function pollWorkOSTokens(options: {
 	expiresInSeconds: number;
 	initialPollIntervalSeconds: number;
 	requestTimeoutMs: number;
-	workosApiBaseUrl: string;
+	accountApiBaseUrl: string;
 	onProgress?: OAuthLoginCallbacks["onProgress"];
 }): Promise<WorkOSTokenSuccess> {
 	const deadline = Date.now() + options.expiresInSeconds * 1000;
@@ -349,7 +349,7 @@ async function pollWorkOSTokens(options: {
 	while (Date.now() <= deadline) {
 		const response = await fetch(
 			resolveUrl(
-				options.workosApiBaseUrl,
+				options.accountApiBaseUrl,
 				DEFAULT_WORKOS_ENDPOINTS.authenticate,
 			),
 			{
@@ -570,7 +570,7 @@ export async function loginClineOAuth(
 				expiresInSeconds: deviceAuthorization.expiresInSeconds,
 				initialPollIntervalSeconds: deviceAuthorization.pollIntervalSeconds,
 				requestTimeoutMs: options.requestTimeoutMs ?? DEFAULT_HTTP_TIMEOUT_MS,
-				workosApiBaseUrl: DEFAULT_WORKOS_API_BASE_URL,
+				accountApiBaseUrl: DEFAULT_WORKOS_API_BASE_URL,
 				onProgress: options.callbacks.onProgress,
 			});
 
@@ -690,7 +690,7 @@ export async function completeClineDeviceAuth(options: {
 			expiresInSeconds: options.expiresInSeconds,
 			initialPollIntervalSeconds: options.pollIntervalSeconds,
 			requestTimeoutMs: options.requestTimeoutMs ?? DEFAULT_HTTP_TIMEOUT_MS,
-			workosApiBaseUrl: DEFAULT_WORKOS_API_BASE_URL,
+			accountApiBaseUrl: DEFAULT_WORKOS_API_BASE_URL,
 		});
 		const credentials = await registerWorkOSTokens(
 			workosTokens,

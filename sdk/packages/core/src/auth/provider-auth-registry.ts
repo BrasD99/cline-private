@@ -14,8 +14,6 @@ import { getValidOpenAICodexCredentials, loginOpenAICodex } from "./codex";
 import { getValidOcaCredentials, loginOcaOAuth } from "./oca";
 import type { OAuthCredentials, OAuthLoginCallbacks } from "./types";
 
-const WORKOS_TOKEN_PREFIX = "workos:";
-
 export type ProviderOAuthCredentials = OAuthCredentials;
 
 export interface ProviderAuthLoginInput {
@@ -53,17 +51,11 @@ export interface ProviderAuthHandler {
 }
 
 function formatClineApiKey(accessToken: string): string {
-	const token = accessToken.trim();
-	return token.toLowerCase().startsWith(WORKOS_TOKEN_PREFIX)
-		? token
-		: `${WORKOS_TOKEN_PREFIX}${token}`;
+	return accessToken.trim();
 }
 
 function stripClineApiKeyPrefix(accessToken: string): string {
-	const token = accessToken.trim();
-	return token.toLowerCase().startsWith(WORKOS_TOKEN_PREFIX)
-		? token.slice(WORKOS_TOKEN_PREFIX.length)
-		: token;
+	return accessToken.trim();
 }
 
 function readExpiryFromToken(accessToken: string): number | null {

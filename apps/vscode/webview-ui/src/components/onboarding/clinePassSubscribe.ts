@@ -4,7 +4,7 @@ import { UiServiceClient } from "@/services/grpc-client"
 // ClinePass subscription signup page in the dashboard (requires auth).
 const CLINE_PASS_SUBSCRIBE_PATH = "/onboarding/individual-plan"
 const CLINE_PASS_USAGE_PATH = "/dashboard/subscription"
-export const DEFAULT_APP_BASE_URL = "https://app.cline.bot"
+export const DEFAULT_APP_BASE_URL = ""
 
 // Module-level so the pending intent survives OnboardingView unmounting: handleAuthCallback
 // completes the welcome view (unmounting onboarding) before it pushes the auth-status update

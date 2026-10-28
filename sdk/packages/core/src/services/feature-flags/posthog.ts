@@ -21,7 +21,7 @@ export function buildClinePostHogClient(
 	options?: PostHogOptions | undefined,
 ): PostHog {
 	return new PostHog(apiKey, {
-		host: "https://data.cline.bot",
+		host: "",
 		...options,
 	});
 }

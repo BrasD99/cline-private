@@ -113,7 +113,7 @@ function toRuntimeCapabilities(
 	return next.length > 0 ? next : undefined;
 }
 
-export const DEFAULT_MODELS_CATALOG_URL = "https://models.dev/api.json";
+export const DEFAULT_MODELS_CATALOG_URL = "";
 const DEFAULT_MODELS_CATALOG_CACHE_TTL_MS = 10 * 60 * 1000;
 const DEFAULT_PRIVATE_MODELS_CACHE_TTL_MS = 5 * 60 * 1000;
 const DEFAULT_PRIVATE_MODELS_REQUEST_TIMEOUT_MS = 5_000;

@@ -23,9 +23,6 @@ const runtimeBuildId = resolveSdkRuntimeBuildId(
 // bundled entrypoint and installed again from package.json.
 const external = [
 	"@cline/core/hub/daemon-entry",
-	// Preserve the optional provider boundary; bundling it hoists posthog-node
-	// into every runtime entrypoint even when the local import is dynamic.
-	"@cline/core/services/feature-flags/posthog",
 	...Object.keys({
 		...(packageJson.dependencies ?? {}),
 		...(packageJson.peerDependencies ?? {}),
@@ -77,11 +74,6 @@ const builds: Parameters<typeof Bun.build>[0][] = [
 	{
 		entrypoints: ["./src/services/telemetry/index.ts"],
 		outdir: "./dist/services/telemetry",
-		...buildConfig,
-	},
-	{
-		entrypoints: ["./src/services/feature-flags/posthog.ts"],
-		outdir: "./dist/services/feature-flags",
 		...buildConfig,
 	},
 ];

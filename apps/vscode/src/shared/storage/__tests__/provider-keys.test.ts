@@ -18,10 +18,10 @@ describe("Provider key mapping", () => {
 		expect(getProviderDefaultModelId("together")).to.equal(openrouterDefault)
 	})
 
-	it("uses the SDK-declared default (first recommended model) for cline", () => {
+	it("uses the SDK-declared default for cline", () => {
 		const expectedDefault = getProviderCollectionSync("cline")?.provider.defaultModelId ?? ""
-		expect(expectedDefault).to.not.equal("")
 		expect(getProviderDefaultModelId("cline")).to.equal(expectedDefault)
+		expect(expectedDefault).to.equal("")
 	})
 
 	it("returns an empty string for local-only providers", () => {
@@ -54,6 +54,6 @@ describe("Provider key mapping", () => {
 		const expectedDefault = getProviderCollectionSync("nousResearch")?.provider.defaultModelId ?? ""
 		expect(getProviderDefaultModelId("nousResearch")).to.equal(expectedDefault)
 		expect(getProviderDefaultModelId("nousresearch")).to.equal(expectedDefault)
-		expect(expectedDefault).not.to.equal("")
+		expect(expectedDefault).to.equal("")
 	})
 })

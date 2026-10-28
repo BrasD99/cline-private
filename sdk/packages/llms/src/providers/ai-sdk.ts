@@ -606,38 +606,10 @@ function shouldIncludeReasoningHistory(
 }
 
 async function resolveGatewayAiSdkTelemetry(
-	providerId: string,
-	request: GatewayStreamRequest,
+	_providerId: string,
+	_request: GatewayStreamRequest,
 ): Promise<AiSdkTelemetryDecision> {
-	try {
-		const runtime = await import("../services/langfuse-telemetry");
-		return await runtime.resolveAiSdkTelemetry(
-			providerId,
-			resolveTraceSamplingKey(request),
-		);
-	} catch {
-		return { isEnabled: false };
-	}
-}
-
-/**
- * Whole-task sampling key: prefer the session/task id so every request in a
- * task gets the same sampling decision and traces stay complete.
- */
-function resolveTraceSamplingKey(
-	request: GatewayStreamRequest,
-): string | undefined {
-	const metadata =
-		request.metadata && typeof request.metadata === "object"
-			? (request.metadata as Record<string, unknown>)
-			: {};
-	for (const key of ["sessionId", "conversationId", "distinctId"]) {
-		const value = metadata[key];
-		if (typeof value === "string" && value.trim().length > 0) {
-			return value;
-		}
-	}
-	return undefined;
+	return { isEnabled: false };
 }
 
 async function withAiSdkLangfuseTraceContext<T>(
@@ -660,30 +632,12 @@ async function withAiSdkLangfuseTraceContext<T>(
 	const sessionId =
 		typeof metadata.sessionId === "string" ? metadata.sessionId : undefined;
 
-	if (!enabled) {
-		return await callback();
-	}
-
-	// Operator env tags/metadata are merged inside the runtime, which also
-	// skips propagation when nothing at all is set.
-	const runtime = await import("../services/langfuse-telemetry");
-	return await runtime.withLangfuseTraceAttributes(
-		true,
-		{
-			...(distinctId ? { userId: distinctId } : {}),
-			...(sessionId ? { sessionId } : {}),
-			...(tags?.length ? { tags } : {}),
-			metadata: {
-				...(typeof metadata.conversationId === "string"
-					? { conversationId: metadata.conversationId }
-					: {}),
-				...(typeof metadata.runId === "string"
-					? { runId: metadata.runId }
-					: {}),
-			},
-		},
-		callback,
-	);
+	void enabled;
+	void metadata;
+	void tags;
+	void distinctId;
+	void sessionId;
+	return await callback();
 }
 
 function buildAiSdkRuntimeContext(
@@ -2051,80 +2005,14 @@ async function* emitAiSdkEvents(
 }
 
 async function createProviderModule(
-	kind: ProviderModuleKind,
+	_kind: ProviderModuleKind,
 	config: GatewayResolvedProviderConfig,
 	context: GatewayProviderContext,
 ): Promise<ProviderFactoryResult> {
-	switch (kind) {
-		case "cline": {
-			const { createClineProviderModule } = await import("./vendors/cline");
-			return createClineProviderModule(config, context);
-		}
-		case "openai": {
-			const { createOpenAIProviderModule } = await import("./vendors/openai");
-			return createOpenAIProviderModule(config, context);
-		}
-		case "openai-compatible": {
-			const { createOpenAICompatibleProviderModule } = await import(
-				"./vendors/openai-compatible"
-			);
-			return createOpenAICompatibleProviderModule(config, context);
-		}
-		case "anthropic": {
-			const { createAnthropicProviderModule } = await import(
-				"./vendors/anthropic"
-			);
-			return createAnthropicProviderModule(config, context);
-		}
-		case "google": {
-			const { createGoogleProviderModule } = await import("./vendors/google");
-			return createGoogleProviderModule(config, context);
-		}
-		case "vertex": {
-			const { createVertexProviderModule } = await import("./vendors/vertex");
-			return createVertexProviderModule(config, context);
-		}
-		case "bedrock": {
-			const { createBedrockProviderModule } = await import("./vendors/bedrock");
-			return createBedrockProviderModule(config);
-		}
-		case "mistral": {
-			const { createMistralProviderModule } = await import("./vendors/mistral");
-			return createMistralProviderModule(config);
-		}
-		case "claude-code": {
-			const { createClaudeCodeProviderModule } = await import(
-				"./vendors/community"
-			);
-			return createClaudeCodeProviderModule(config);
-		}
-		case "openai-codex": {
-			const { createOpenAICodexProviderModule } = await import(
-				"./vendors/community"
-			);
-			return createOpenAICodexProviderModule(config);
-		}
-		case "opencode": {
-			const { createOpenCodeProviderModule } = await import(
-				"./vendors/community"
-			);
-			return createOpenCodeProviderModule(config);
-		}
-		case "dify": {
-			const { createDifyProviderModule } = await import("./vendors/community");
-			return createDifyProviderModule(config);
-		}
-		case "ollama": {
-			const { createOllamaProviderModule } = await import("./vendors/ollama");
-			return createOllamaProviderModule(config, context);
-		}
-		case "sapaicore": {
-			const { createSapAiCoreProviderModule } = await import(
-				"./vendors/community"
-			);
-			return createSapAiCoreProviderModule(config);
-		}
-	}
+	const { createOpenAICompatibleProviderModule } = await import(
+		"./vendors/openai-compatible"
+	);
+	return createOpenAICompatibleProviderModule(config, context);
 }
 
 /**

@@ -1,5 +1,3 @@
-import { createGateway } from "@ai-sdk/gateway";
-import { createOpenAI } from "@ai-sdk/openai";
 import { detectMediaType } from "@ai-sdk/provider-utils";
 import type {
 	GatewayProviderMetadata,
@@ -8,7 +6,7 @@ import type {
 
 export type { StreamingAudioTranscriptionSession } from "@cline/shared";
 
-import { type TranscriptionResult, transcribe } from "ai";
+import type { TranscriptionResult } from "ai";
 import { BUILTIN_PROVIDER_MANIFESTS_BY_ID } from "./providers/builtins";
 import {
 	type ProviderConfig,
@@ -20,7 +18,7 @@ import {
 } from "./providers/url";
 
 export const DEFAULT_TRANSCRIPTION_TIMEOUT_MS = 120_000;
-const DEFAULT_OPENAI_BASE_URL = "https://api.openai.com/v1";
+const DEFAULT_OPENAI_BASE_URL = "";
 const DEFAULT_ELEVENLABS_BASE_URL = "https://api.elevenlabs.io/v1";
 const DEFAULT_VERCEL_AI_GATEWAY_BASE_URL = "https://ai-gateway.vercel.sh/v4/ai";
 
@@ -29,8 +27,8 @@ export interface AudioTranscriptionRequest {
 	modelId: string;
 	/** Encoded audio file; the format is detected from its bytes. */
 	audio: Uint8Array;
-	/** Provider options for AI SDK transports (Gateway and OpenAI-compatible). */
-	providerOptions?: Parameters<typeof transcribe>[0]["providerOptions"];
+	/** Unused by the OpenAI-compatible transcription request. */
+	providerOptions?: Record<string, unknown>;
 	abortSignal?: AbortSignal;
 	maxRetries?: number;
 }
@@ -223,46 +221,9 @@ export async function createStreamingAudioTranscriptionSession(
 		);
 	}
 
-	const signal = resolveAbortSignal(
-		request.providerConfig,
-		request.abortSignal,
+	throw new Error(
+		`Provider "${request.providerConfig.providerId}" does not support browser streaming transcription`,
 	);
-	const fetchImpl = request.providerConfig.fetch ?? fetch;
-	const gateway = createGateway({
-		apiKey,
-		baseURL: route.baseUrl,
-		headers: request.providerConfig.headers,
-		fetch: Object.assign(
-			(
-				input: Parameters<typeof fetch>[0],
-				init?: Parameters<typeof fetch>[1],
-			) =>
-				fetchImpl(input, {
-					...init,
-					signal: init?.signal
-						? AbortSignal.any([signal, init.signal])
-						: signal,
-				}),
-			fetchImpl,
-		),
-	});
-	signal.throwIfAborted();
-	const result = await gateway.experimental_transcription.getToken({
-		model: modelId,
-		expiresAfterSeconds,
-	});
-	return {
-		transport: "vercel-ai-gateway",
-		modelId,
-		baseUrl: route.baseUrl,
-		token: result.token,
-		url: result.url,
-		// Gemini Live accepts 16 kHz PCM input. Gateway forwards the declared
-		// format; it does not resample audio to the upstream provider's rate.
-		sampleRate: modelId.startsWith("google/") ? 16_000 : 24_000,
-		expiresAt:
-			typeof result.expiresAt === "number" ? result.expiresAt : undefined,
-	};
 }
 
 async function createOpenAIStreamingSession(
@@ -456,37 +417,39 @@ export async function transcribeAudio(
 		return transcribeElevenLabsAudio(request, apiKey, route);
 	}
 
-	const settings = {
-		apiKey,
-		baseURL: route.baseUrl,
-		fetch: request.providerConfig.fetch,
-		headers: request.providerConfig.headers,
-	};
-	const model =
-		route.transport === "vercel-ai-gateway"
-			? createGateway(settings).transcriptionModel(modelId)
-			: createOpenAI(settings).transcription(modelId);
-	const result = await transcribe({
-		model,
-		providerOptions: request.providerOptions,
-		audio: request.audio,
-		abortSignal: resolveAbortSignal(
-			request.providerConfig,
-			request.abortSignal,
-		),
-		maxRetries: request.maxRetries,
-	});
-	// The AI SDK accepts an empty transcript for silent audio; treat it as a
-	// failed transcription, as the ElevenLabs path does.
-	if (!result.text.trim()) {
+	if (!route.baseUrl) {
+		throw new Error("A transcription base URL is required");
+	}
+	const form = new FormData();
+	form.set("model", modelId);
+	form.set(
+		"file",
+		new Blob([Uint8Array.from(request.audio)]),
+		"audio.webm",
+	);
+	const headers = new Headers(request.providerConfig.headers);
+	headers.set("Authorization", `Bearer ${apiKey}`);
+	const response = await (request.providerConfig.fetch ?? fetch)(
+		`${route.baseUrl.replace(/\/+$/, "")}/audio/transcriptions`,
+		{
+			method: "POST",
+			headers,
+			body: form,
+			signal: resolveAbortSignal(
+				request.providerConfig,
+				request.abortSignal,
+			),
+		},
+	);
+	if (!response.ok) {
+		throw new Error(`Transcription failed: HTTP ${response.status}`);
+	}
+	const payload = (await response.json()) as { text?: string; language?: string };
+	if (!payload.text?.trim()) {
 		throw new Error("Transcription returned no text");
 	}
-
 	return {
-		text: result.text,
-		language: result.language,
-		durationInSeconds: result.durationInSeconds,
-		segments: result.segments,
-		warnings: result.warnings,
+		text: payload.text,
+		language: payload.language,
 	};
 }

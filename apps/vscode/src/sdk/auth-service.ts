@@ -23,7 +23,6 @@ import type { ApiProvider } from "@shared/api"
 import { AuthState, UserInfo } from "@shared/proto/cline/account"
 import type { EmptyRequest, String } from "@shared/proto/cline/common"
 import { ShowMessageType } from "@shared/proto/host/window"
-import axios from "axios"
 import { ClineEnv } from "@/config"
 import type { Controller } from "@/core/controller"
 import { getRequestRegistry, type StreamingResponseHandler } from "@/core/controller/grpc-handler"
@@ -36,7 +35,7 @@ import { buildBasicClineHeaders } from "@/services/EnvUtils"
 import { featureFlagsService } from "@/services/feature-flags"
 import { telemetryService } from "@/services/telemetry"
 import { CLINE_API_ENDPOINT } from "@/shared/cline/api"
-import { fetch, getAxiosSettings } from "@/shared/net"
+import { fetch } from "@/shared/net"
 import { Logger } from "@/shared/services/Logger"
 import { openExternal } from "@/utils/env"
 import { getProviderSettingsManager } from "./provider-migration"
@@ -82,8 +81,6 @@ export { LogoutReason }
 // Constants
 // ---------------------------------------------------------------------------
 
-const WORKOS_TOKEN_PREFIX = "workos:"
-
 type AuthMetadata = Record<string, unknown>
 
 function getAuthMetadata(auth: ProviderSettings["auth"]): AuthMetadata | undefined {
@@ -123,11 +120,7 @@ function readClineCredentials(): {
 			return null
 		}
 
-		// Strip workos: prefix if present (providers.json stores it with prefix)
-		let accessToken = settings.auth.accessToken
-		if (accessToken.toLowerCase().startsWith(WORKOS_TOKEN_PREFIX)) {
-			accessToken = accessToken.slice(WORKOS_TOKEN_PREFIX.length)
-		}
+		const accessToken = settings.auth.accessToken
 
 		const result = {
 			accessToken,
@@ -168,7 +161,7 @@ function writeClineCredentials(credentials: {
 
 		const auth = {
 			...(existing?.auth ?? {}),
-			accessToken: `${WORKOS_TOKEN_PREFIX}${credentials.accessToken}`,
+			accessToken: credentials.accessToken,
 			refreshToken: credentials.refreshToken,
 			accountId: credentials.accountId,
 		} as Record<string, unknown>
@@ -306,30 +299,8 @@ export class AuthService {
 	/**
 	 * Fetch user info from the Cline API using an access token.
 	 */
-	private async fetchUserInfoFromApi(accessToken: string): Promise<ClineAccountUserInfo | null> {
-		try {
-			const apiBaseUrl = ClineEnv.config().apiBaseUrl
-			// Ensure the token has the workos: prefix for the API
-			const bearerToken = accessToken.toLowerCase().startsWith(WORKOS_TOKEN_PREFIX)
-				? accessToken
-				: `${WORKOS_TOKEN_PREFIX}${accessToken}`
-			sdkDebug(
-				`[SdkAuthService] fetchUserInfoFromApi: GET ${apiBaseUrl}/api/v1/users/me (tokenHash=${hashSecret(accessToken)})`,
-			)
-			const response = await axios.get(`${apiBaseUrl}/api/v1/users/me`, {
-				headers: {
-					Authorization: `Bearer ${bearerToken}`,
-					"Content-Type": "application/json",
-					...(await buildBasicClineHeaders()),
-				},
-				...getAxiosSettings(),
-			})
-			sdkDebug(`[SdkAuthService] fetchUserInfoFromApi: response status=${response.status}`)
-			return response.data?.data ?? null
-		} catch (error) {
-			Logger.error("[SdkAuthService] Failed to fetch user info from API:", error)
-			return null
-		}
+	private async fetchUserInfoFromApi(_accessToken: string): Promise<ClineAccountUserInfo | null> {
+		return null
 	}
 
 	private toOAuthCredentials(authInfo: ClineAuthInfo): OAuthCredentials {
@@ -392,7 +363,7 @@ export class AuthService {
 			return null
 		}
 
-		return `${WORKOS_TOKEN_PREFIX}${this._clineAuthInfo.idToken}`
+		return this._clineAuthInfo.idToken
 	}
 
 	/**
@@ -1161,29 +1132,8 @@ export class AuthService {
 	/**
 	 * Handle OpenRouter OAuth callback.
 	 */
-	async handleOpenRouterCallback(code: string): Promise<void> {
-		let apiKey: string
-		try {
-			const response = await fetch("https://openrouter.ai/api/v1/auth/keys", {
-				method: "POST",
-				headers: { "Content-Type": "application/json" },
-				body: JSON.stringify({ code }),
-			})
-			if (!response.ok) {
-				throw new Error(`OpenRouter API responded with status ${response.status}`)
-			}
-			const data = (await response.json()) as { key?: string }
-			if (data?.key) {
-				apiKey = data.key
-			} else {
-				throw new Error("Invalid response from OpenRouter API")
-			}
-		} catch (error) {
-			Logger.error("[SdkAuthService] Error exchanging code for API key:", error)
-			throw error
-		}
-
-		this.setProviderApiKey("openrouter", "openRouterApiKey", apiKey)
+	async handleOpenRouterCallback(_code: string): Promise<void> {
+		throw new Error("External provider login is disabled")
 	}
 
 	/**

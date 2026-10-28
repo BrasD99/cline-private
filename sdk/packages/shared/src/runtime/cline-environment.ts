@@ -16,17 +16,17 @@ export const CLINE_ENVIRONMENTS: Readonly<
 > = {
 	production: {
 		environment: "production",
-		appBaseUrl: "https://app.cline.bot",
-		apiBaseUrl: "https://api.cline.bot",
-		mcpBaseUrl: "https://api.cline.bot/v1/mcp",
-		workOsClientId: "client_01K3A541FN8TA3EPPHTD2325AR",
+		appBaseUrl: "",
+		apiBaseUrl: "",
+		mcpBaseUrl: "",
+		workOsClientId: "",
 	},
 	staging: {
 		environment: "staging",
-		appBaseUrl: "https://staging-app.cline.bot",
-		apiBaseUrl: "https://core-api.staging.int.cline.bot",
-		mcpBaseUrl: "https://core-api.staging.int.cline.bot/v1/mcp",
-		workOsClientId: "client_01K3A5415VF6QBQBG3XYCW91G6",
+		appBaseUrl: "",
+		apiBaseUrl: "",
+		mcpBaseUrl: "",
+		workOsClientId: "",
 	},
 	local: {
 		environment: "local",

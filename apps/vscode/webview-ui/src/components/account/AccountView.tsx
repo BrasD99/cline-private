@@ -84,7 +84,7 @@ const ClineAccountView = ({ clineUser, userOrganizations, activeOrganization, cl
 	const activeAccount = useRef(dropdownValue)
 	activeAccount.current = dropdownValue
 	const isClineTester = useMemo(() => (email ? isClineInternalTester(email) : false), [email])
-	const clineUrl = appBaseUrl || "https://app.cline.bot"
+	const clineUrl = appBaseUrl || ""
 	const privacySettingsUrl = resolveClineAppUrl(clineUser.dataPrivacyPath, clineUrl)
 
 	const fetchCreditBalance = useCallback(

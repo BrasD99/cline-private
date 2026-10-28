@@ -22,7 +22,7 @@ import type {
 import { describe, expect, it } from "vitest";
 import { createGateway } from "../gateway";
 
-const PROVIDER_ID = "nvidia";
+const PROVIDER_ID = "openai-compatible";
 const KIMI_K3_ID = "moonshotai/kimi-k3";
 const KIMI_K3_EFFORTS: readonly ModelReasoningOption[] = [
 	{ type: "effort", values: ["low", "high", "max"] },
@@ -56,6 +56,7 @@ async function wireBody(input: {
 			{
 				providerId,
 				apiKey: "test-key",
+				baseUrl: "https://example.invalid/v1",
 				fetch: fetchStub,
 				// A config model overrides a builtin of the same id, so these
 				// definitions decide what the gateway sees regardless of the catalog.

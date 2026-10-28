@@ -13,7 +13,7 @@ const outdir = resolve(import.meta.dir, "dist/plugin-runtime");
 
 /** Run after SDK packages build, so the runtime uses the same compiled package exports. */
 export async function buildPluginRuntime(): Promise<void> {
-	const packages = ["sdk", "core", "agents", "llms", "shared"].map((name) => {
+	const packages = ["core", "agents", "llms", "shared"].map((name) => {
 		const root = join(packagesRoot, name);
 		const manifest = JSON.parse(
 			readFileSync(join(root, "package.json"), "utf8"),

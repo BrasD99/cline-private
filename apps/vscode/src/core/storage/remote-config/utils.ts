@@ -3,16 +3,11 @@ import { parseRemoteSkillEntries } from "@core/context/instructions/user-instruc
 import type { RemoteConfig, S3AccessKeySettings } from "@shared/remote-config/schema"
 import { ConfiguredAPIKeys, GlobalStateAndSettings, RemoteConfigFields } from "@shared/storage/state-keys"
 import { AuthService } from "@/services/auth/AuthService"
-import { getDistinctId } from "@/services/logging/distinctId"
 import { type McpHub } from "@/services/mcp/McpHub"
 import { telemetryService } from "@/services/telemetry"
-import { OpenTelemetryClientProvider } from "@/services/telemetry/providers/opentelemetry/OpenTelemetryClientProvider"
-import { OpenTelemetryTelemetryProvider } from "@/services/telemetry/providers/opentelemetry/OpenTelemetryTelemetryProvider"
 import { type TelemetryService } from "@/services/telemetry/TelemetryService"
 import { ApiProvider } from "@/shared/api"
-import { isOpenTelemetryConfigValid, remoteConfigToOtelConfig } from "@/shared/services/config/otel-config"
 import { Logger } from "@/shared/services/Logger"
-import { syncWorker } from "@/shared/services/worker/sync"
 import { BlobStoreSettings } from "@/shared/storage"
 import { deleteRemoteConfigFromCache } from "../disk"
 import { StateManager } from "../StateManager"
@@ -240,46 +235,12 @@ export function transformRemoteConfigToStateShape(remoteConfig: RemoteConfig): P
 }
 
 export const REMOTE_CONFIG_OTEL_PROVIDER_ID = "OpenTelemetryRemoteConfiguredProvider"
-async function applyRemoteOTELConfig(transformed: Partial<RemoteConfigFields>, telemetryService: TelemetryService) {
-	try {
-		const otelConfig = remoteConfigToOtelConfig(transformed)
-		if (isOpenTelemetryConfigValid(otelConfig)) {
-			const client = new OpenTelemetryClientProvider(otelConfig)
+async function applyRemoteOTELConfig(
+	_transformed: Partial<RemoteConfigFields>,
+	_telemetryService: TelemetryService,
+): Promise<void> {}
 
-			try {
-				if (client.meterProvider || client.loggerProvider || client.tracerProvider) {
-					telemetryService.addProvider(
-						await new OpenTelemetryTelemetryProvider(client.meterProvider, client.loggerProvider, {
-							name: REMOTE_CONFIG_OTEL_PROVIDER_ID,
-							bypassUserSettings: true,
-							client,
-						}).initialize(),
-					)
-					return
-				}
-			} catch (error) {
-				await client.dispose()
-				throw error
-			}
-			await client.dispose()
-		}
-	} catch (err) {
-		Logger.error("[REMOTE CONFIG DEBUG] Failed to apply remote OTEL config", err)
-	}
-}
-
-async function applyRemoteSyncQueueConfig(transformed: Partial<RemoteConfigFields>) {
-	try {
-		const blobStoreConfig = transformed.blobStoreConfig
-		if (!blobStoreConfig) {
-			return
-		}
-
-		syncWorker().init({ ...blobStoreConfig, userDistinctId: getDistinctId() })
-	} catch (err) {
-		Logger.error("[REMOTE CONFIG DEBUG] Failed to apply remote sync queue config", err)
-	}
-}
+async function applyRemoteSyncQueueConfig(_transformed: Partial<RemoteConfigFields>) {}
 
 export async function clearRemoteConfig(organizationId?: string): Promise<void> {
 	try {

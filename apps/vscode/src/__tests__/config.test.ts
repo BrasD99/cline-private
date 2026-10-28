@@ -80,9 +80,9 @@ describe("ClineEndpoint configuration", () => {
 
 			const config = ClineEndpoint.config
 			config.environment.should.not.equal(Environment.selfHosted)
-			// Should use production defaults
-			config.appBaseUrl.should.equal("https://app.cline.bot")
-			config.apiBaseUrl.should.equal("https://api.cline.bot")
+			// Production defaults are blank so the extension does not call Cline.
+			config.appBaseUrl.should.equal("")
+			config.apiBaseUrl.should.equal("")
 		})
 
 		it("should accept URLs with ports", async () => {
@@ -643,11 +643,11 @@ describe("ClineEndpoint configuration", () => {
 
 			await ClineEndpoint.initialize(bundledDir)
 
-			// Should use production defaults
+			// Production defaults are blank so the extension does not call Cline.
 			const config = ClineEndpoint.config
 			config.environment.should.not.equal(Environment.selfHosted)
-			config.appBaseUrl.should.equal("https://app.cline.bot")
-			config.apiBaseUrl.should.equal("https://api.cline.bot")
+			config.appBaseUrl.should.equal("")
+			config.apiBaseUrl.should.equal("")
 		})
 
 		it("should throw ClineConfigurationError for invalid bundled file", async () => {

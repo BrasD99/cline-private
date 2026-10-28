@@ -10,17 +10,12 @@ import { HookDiscoveryCache } from "./core/hooks/HookDiscoveryCache"
 import { HookProcessRegistry } from "./core/hooks/HookProcessRegistry"
 import { StateManager } from "./core/storage/StateManager"
 import { ExtensionRegistryInfo } from "./registry"
-import { registerVsCodeLmHandler } from "./sdk/vscode-lm/register-vscode-lm"
 import { registerClineClientIdentity } from "./services/ClineClientIdentity"
 import { ErrorService } from "./services/error"
 import { featureFlagsService } from "./services/feature-flags"
-import { getDistinctId } from "./services/logging/distinctId"
 import { telemetryService } from "./services/telemetry"
-import { PostHogClientProvider } from "./services/telemetry/providers/posthog/PostHogClientProvider"
 import { ClineTempManager } from "./services/temp"
 import { ShowMessageType } from "./shared/proto/host/window"
-import { syncWorker } from "./shared/services/worker/sync"
-import { getBlobStoreSettingsFromEnv } from "./shared/services/worker/worker"
 import { getLatestAnnouncementId } from "./utils/announcements"
 import { arePathsEqual } from "./utils/path"
 
@@ -65,17 +60,7 @@ export async function initialize(storageContext: StorageContext): Promise<Webvie
 
 	void registerClineClientIdentity()
 
-	// Register host-only SDK provider handlers (e.g. VS Code Language Model API),
-	// which depend on the `vscode` module and cannot live in the SDK package.
-	// Must run before any handler is built (standalone utilities or task loop).
-	registerVsCodeLmHandler()
-
-	// =============== External services ===============
 	await ErrorService.initialize()
-	// Initialize PostHog client provider (skip in self-hosted mode)
-	if (!ClineEndpoint.isSelfHosted()) {
-		PostHogClientProvider.getInstance()
-	}
 
 	// =============== Webview services ===============
 	const webview = HostProvider.get().createWebviewProvider()
@@ -86,11 +71,6 @@ export async function initialize(storageContext: StorageContext): Promise<Webvie
 	// Check if this workspace was opened from worktree quick launch
 	await checkWorktreeAutoOpen(stateManager)
 
-	// =============== Background sync and cleanup tasks ===============
-	// Use remote config blobStoreConfig if available, otherwise fall back to env vars
-	const blobStoreSettings = stateManager.getRemoteConfigSettings()?.blobStoreConfig ?? getBlobStoreSettingsFromEnv()
-	syncWorker().init({ ...blobStoreSettings, userDistinctId: getDistinctId() })
-	// Clean up old temp files in background (non-blocking) and start periodic cleanup every 24 hours
 	ClineTempManager.startPeriodicCleanup()
 
 	telemetryService.captureExtensionActivated()
@@ -168,13 +148,10 @@ async function checkWorktreeAutoOpen(stateManager: StateManager): Promise<void> 
  */
 export async function tearDown(): Promise<void> {
 	try {
-		PostHogClientProvider.getInstance().dispose()
 		telemetryService.dispose()
 		ErrorService.get().dispose()
 		featureFlagsService.dispose()
-		// Dispose all webview instances
 		await WebviewProvider.disposeAllInstances()
-		syncWorker().dispose()
 		clearOnboardingModelsCache()
 
 		// Kill any running hook processes to prevent zombies

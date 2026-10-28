@@ -1,12 +1,9 @@
-import { createGateway } from "@ai-sdk/gateway";
 import { createOpenAICompatible } from "@ai-sdk/openai-compatible";
 import type { LanguageModelV4 } from "@ai-sdk/provider";
 import type {
 	GatewayProviderContext,
 	GatewayResolvedProviderConfig,
 } from "@cline/shared";
-import { modelProducesImages } from "@cline/shared";
-import { createOpenRouter } from "@openrouter/ai-sdk-provider";
 import { wrapLanguageModel } from "ai";
 import { ensureFetch, resolveApiKey } from "../http";
 import { splitToolImagesMiddleware } from "../middleware/split-tool-images";
@@ -86,27 +83,6 @@ function createAzureApiVersionFetch(
 }
 
 type ResponseErrorHandler = (response: Response) => Promise<void> | void;
-
-function resolveVercelGatewayImageBaseUrl(
-	baseUrl: string | undefined,
-): string | undefined {
-	if (!baseUrl) return undefined;
-	try {
-		const url = new URL(baseUrl);
-		if (
-			url.hostname === "ai-gateway.vercel.sh" &&
-			trimTrailingSlashes(url.pathname) === "/v1"
-		) {
-			// The provider's generic OpenAI-compatible endpoint is not the AI SDK
-			// Gateway endpoint. Let @ai-sdk/gateway select its current versioned
-			// `/ai` base instead of producing `/v1/image-model`.
-			return undefined;
-		}
-		return trimTrailingSlashes(url.toString());
-	} catch {
-		return baseUrl;
-	}
-}
 
 function readResponseErrorHandler(
 	config: GatewayResolvedProviderConfig,
@@ -249,32 +225,6 @@ export async function createOpenAICompatibleProviderModule(
 		includeUsage: true,
 		transformRequestBody: withMaxCompletionTokensForReasoningModels,
 	} as never);
-	const useOpenRouterImageTransport =
-		context.provider.metadata?.imageTransport === "openrouter" &&
-		modelProducesImages(context.model);
-	const openRouterFetch =
-		context.provider.metadata?.responseEnvelope === "success-data"
-			? createSuccessDataResponseFetch(ensureFetch(providerFetch))
-			: providerFetch;
-	const openRouterImageProvider = useOpenRouterImageTransport
-		? createOpenRouter({
-				apiKey,
-				baseURL: config.baseUrl,
-				headers: config.headers,
-				fetch: openRouterFetch,
-				compatibility:
-					context.provider.id === "openrouter" ? "strict" : "compatible",
-			})
-		: undefined;
-	const vercelGateway =
-		context.provider.id === "vercel-ai-gateway"
-			? createGateway({
-					apiKey,
-					baseURL: resolveVercelGatewayImageBaseUrl(config.baseUrl),
-					headers: config.headers,
-					fetch: providerFetch,
-				})
-			: undefined;
 	return {
 		// Wrap each constructed model with `splitToolImagesMiddleware` so
 		// `role:"tool"` messages whose `output.type === 'content'` carries
@@ -292,16 +242,10 @@ export async function createOpenAICompatibleProviderModule(
 		operations: {
 			language: (modelId) =>
 				wrapLanguageModel({
-					model: (openRouterImageProvider?.chat(modelId) ??
-						provider(modelId)) as LanguageModelV4,
+					model: provider(modelId) as LanguageModelV4,
 					middleware: splitToolImagesMiddleware,
 				}),
-			imageGeneration: (modelId) =>
-				vercelGateway
-					? vercelGateway.imageModel(modelId)
-					: openRouterImageProvider
-						? openRouterImageProvider.imageModel(modelId)
-						: provider.imageModel(modelId),
+			imageGeneration: (modelId) => provider.imageModel(modelId),
 		},
 	};
 }

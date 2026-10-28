@@ -65,6 +65,10 @@ service ModelsService {
   rpc writeProviderConfig(WriteProviderConfigRequest) returns (ProviderConfigResponse);
   // Commits a mode-specific model ID with optional user-authored metadata overrides
   rpc commitModelSelection(CommitModelSelectionRequest) returns (Empty);
+  // Saves a named OpenAI-compatible connection (base URL, API key, model id)
+  rpc addOpenAiConnection(AddOpenAiConnectionRequest) returns (String);
+  // Removes a user-added OpenAI-compatible connection
+  rpc deleteOpenAiConnection(StringRequest) returns (Empty);
 }
 
 // List of VS Code LM models
@@ -850,4 +854,12 @@ message ModelsApiConfiguration {
   optional OpenRouterModelInfo act_mode_cline_model_info = 241;
   optional string act_mode_cline_pass_model_id = 242;
   optional OpenRouterModelInfo act_mode_cline_pass_model_info = 243;
+}
+
+message AddOpenAiConnectionRequest {
+  string name = 1;
+  string base_url = 2;
+  string api_key = 3;
+  string model_id = 4;
+  map<string, string> headers = 5;
 }

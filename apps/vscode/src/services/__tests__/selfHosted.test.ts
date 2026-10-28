@@ -63,7 +63,7 @@ describe("SelfHosted Mode - PostHog Disabling", () => {
 
 			const config = ErrorProviderFactory.getDefaultConfig()
 
-			assert.strictEqual(config.type, "posthog", "Should return posthog type when not in selfHosted mode")
+			assert.strictEqual(config.type, "no-op", "Error reporting stays disabled outside self-hosted mode")
 		})
 
 		it("should create NoOp provider when in selfHosted mode", async () => {

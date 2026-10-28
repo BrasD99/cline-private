@@ -890,17 +890,10 @@ export class Controller {
 	 * and then every hour, to enforce enterprise policy (provider lockdown,
 	 * MCP server management, OpenTelemetry, etc.).
 	 */
-	private startRemoteConfigTimer(): void {
-		// Set up 1-hour interval
-		this.remoteConfigTimer = setInterval(() => {
-			this.refreshRemoteConfig().catch((err) => Logger.error("[SdkController] Remote config timer failed:", err))
-		}, 3600000) // 1 hour
-	}
+	private startRemoteConfigTimer(): void {}
 
-	async refreshRemoteConfig(options: { force?: boolean } = {}): Promise<boolean> {
-		const userId = this.authService.getInfo().user?.uid ?? "signed-out"
-		const organizationId = this.authService.getActiveOrganizationId() ?? "no-org"
-		return this.remoteConfigRefreshCoordinator.refresh(`${userId}:${organizationId}`, options)
+	async refreshRemoteConfig(_options: { force?: boolean } = {}): Promise<boolean> {
+		return false
 	}
 
 	async waitForInitialRemoteConfig(): Promise<void> {

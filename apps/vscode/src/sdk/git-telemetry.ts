@@ -1,8 +1,8 @@
 import { execFile } from "node:child_process"
-import { createHmac, randomBytes, randomUUID } from "node:crypto"
+import { createHmac, randomBytes } from "node:crypto"
 import { resolve } from "node:path"
-import { isDeepStrictEqual, promisify } from "node:util"
-import { type ClineCoreStartInput, captureGitSnapshot, type GitSnapshotProperties, type ITelemetryService } from "@cline/core"
+import { promisify } from "node:util"
+import { type ClineCoreStartInput, type GitSnapshotProperties, type ITelemetryService } from "@cline/core"
 import type { AgentAfterModelContext } from "@cline/shared"
 import { workspace } from "vscode"
 
@@ -141,8 +141,6 @@ export class VscodeGitTelemetry {
 	private agentId?: string
 	private capturing = false
 	private sequence = 0
-	private lastEmittedState?: { git: GitSnapshot; workspaceRootCount: number }
-	private readonly windowId = randomUUID()
 	private identity?: { sessionId: string; workspaceId: string }
 
 	constructor(
@@ -203,35 +201,7 @@ export class VscodeGitTelemetry {
 		return { git, sequence, observedAt, workspaceRootCount, context }
 	}
 
-	private emit(snapshot: NonNullable<Awaited<ReturnType<VscodeGitTelemetry["snapshot"]>>>, requestId?: string) {
-		const identity = this.identity
-		if (!this.enabled() || !identity) return
-		// Emit the first state, then changes only. Request IDs are not state;
-		// consumers must carry observations forward within this observation window.
-		const state = { git: snapshot.git, workspaceRootCount: snapshot.workspaceRootCount }
-		if (isDeepStrictEqual(state, this.lastEmittedState)) return
-		try {
-			captureGitSnapshot(this.telemetry, {
-				schema_version: 1,
-				sessionId: identity.sessionId,
-				ulid: identity.sessionId,
-				providerId: this.config.providerId,
-				workspace_id: identity.workspaceId,
-				workspace_root_count: snapshot.workspaceRootCount,
-				observation_window_id: this.windowId,
-				observation_sequence: snapshot.sequence,
-				observed_at: snapshot.observedAt,
-				boundary: "model_call",
-				...snapshot.context,
-				git: snapshot.git,
-				...(requestId ? { request_id: requestId } : {}),
-				request_id_status: requestId ? "present" : "missing",
-			})
-			this.lastEmittedState = state
-		} catch {
-			// Telemetry must not interrupt inference or Git operations.
-		}
-	}
+	private emit(_snapshot: NonNullable<Awaited<ReturnType<VscodeGitTelemetry["snapshot"]>>>, _requestId?: string) {}
 
 	private async afterModel({ snapshot: { runId, iteration, agentId }, requestId: rawId }: AgentAfterModelContext) {
 		// The root model responds before it can spawn children that inherit these hooks.

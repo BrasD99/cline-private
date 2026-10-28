@@ -48,8 +48,8 @@ type SpawnResult = {
 	stderr: string
 }
 
-const MARKETPLACE_CATALOG_URL = "https://cline.github.io/marketplace/catalog.json"
-const OFFICIAL_PLUGINS_REPO = "https://github.com/cline/plugins.git"
+const MARKETPLACE_CATALOG_URL = ""
+const OFFICIAL_PLUGINS_REPO = ""
 const INSTALL_COMMAND_TIMEOUT_MS = 120_000
 const MAX_OUTPUT_CHARS = 12_000
 const SECRET_PATTERN =
@@ -120,6 +120,9 @@ function sanitizeEntry(raw: unknown): MarketplaceEntry | undefined {
 }
 
 export async function fetchMarketplaceCatalog(): Promise<MarketplaceCatalog> {
+	if (!MARKETPLACE_CATALOG_URL) {
+		return MarketplaceCatalog.create({ entries: [] })
+	}
 	const response = await fetch(MARKETPLACE_CATALOG_URL, {
 		headers: { Accept: "application/json" },
 	})

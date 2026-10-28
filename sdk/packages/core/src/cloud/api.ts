@@ -189,7 +189,7 @@ type CreationAuth = {
 type RequestAuth = string | CreationAuth;
 
 function authSubject(token: string): string | undefined {
-	const payload = decodeJwtPayload(token.replace(/^workos:/, ""));
+	const payload = decodeJwtPayload(token);
 	return typeof payload?.sub === "string" && payload.sub.trim()
 		? payload.sub.trim()
 		: undefined;

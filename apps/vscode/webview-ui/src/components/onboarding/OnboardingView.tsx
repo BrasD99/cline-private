@@ -28,7 +28,6 @@ import {
 	type OnboardingModelsByGroup,
 } from "./data-models"
 import { getUserTypeSelections, NEW_USER_TYPE, STEP_CONFIG } from "./data-steps"
-import { useOnboardingModels } from "./useOnboardingModels"
 
 type OnboardingPage =
 	| "user_type"
@@ -697,21 +696,7 @@ const OnboardingWelcomeFallback = () => {
 }
 
 const OnboardingView = () => {
-	const { status, models } = useOnboardingModels()
-
-	if (status === "loading") {
-		return (
-			<div className="fixed inset-0 flex items-center justify-center">
-				<LoaderCircleIcon className="animate-spin" />
-			</div>
-		)
-	}
-
-	if (status === "empty") {
-		return <OnboardingWelcomeFallback />
-	}
-
-	return <OnboardingViewContent onboardingModels={models} />
+	return <WelcomeView />
 }
 
 export default OnboardingView

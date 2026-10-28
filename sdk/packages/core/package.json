@@ -31,10 +31,6 @@
 			"types": "./dist/services/telemetry/index.d.ts",
 			"import": "./dist/services/telemetry/index.js"
 		},
-		"./services/feature-flags/posthog": {
-			"types": "./dist/services/feature-flags/posthog.d.ts",
-			"import": "./dist/services/feature-flags/posthog.js"
-		},
 		"./cloud": {
 			"types": "./dist/cloud/index.d.ts",
 			"import": "./dist/cloud/index.js"
@@ -79,18 +75,9 @@
 		"yaml": "^2.8.2",
 		"zod": "^4.3.6"
 	},
-	"peerDependencies": {
-		"posthog-node": "^5.8.0"
-	},
-	"peerDependenciesMeta": {
-		"posthog-node": {
-			"optional": true
-		}
-	},
 	"devDependencies": {
 		"@types/proxy-from-env": "^1.0.4",
 		"@types/ws": "^8.18.1",
-		"posthog-node": "^5.8.0",
 		"skills": "1.7.2"
 	},
 	"engines": {

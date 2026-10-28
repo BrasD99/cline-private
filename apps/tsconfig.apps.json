@@ -8,9 +8,6 @@
 			],
 			"@cline/cline-hub": ["./cline-hub/src/server.ts"],
 			"@cline/core": ["../sdk/packages/core/src/index.ts"],
-			"@cline/core/hub/daemon-entry": [
-				"../sdk/packages/core/src/hub/daemon/entry.ts"
-			],
 			"@cline/core/*": [
 				"../sdk/packages/core/src/*",
 				"../sdk/packages/core/src/*/index.ts"

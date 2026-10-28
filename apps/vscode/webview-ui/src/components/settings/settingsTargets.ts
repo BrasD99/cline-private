@@ -13,7 +13,6 @@ export const SETTINGS_NAVIGATION_TARGETS = {
 	general: { tabId: "general" },
 	about: { tabId: "about" },
 	debug: { tabId: "debug" },
-	"remote-config": { tabId: "remote-config" },
 } as const
 
 export type SettingsNavigationTarget = keyof typeof SETTINGS_NAVIGATION_TARGETS

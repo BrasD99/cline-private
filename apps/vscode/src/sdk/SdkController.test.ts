@@ -1,8 +1,5 @@
-import { CLOUD_CREATION_UNCONFIRMED_ERROR_CODE } from "@shared/cloud/cloud-sessions"
-import type { ClineMessage, TurnState } from "@shared/ExtensionMessage"
 import { GetTaskHistoryRequest } from "@shared/proto/cline/task"
 import { describe, expect, it, vi } from "vitest"
-import { ClineError } from "@/services/error/ClineError"
 import { telemetryService } from "@/services/telemetry"
 import { isClineManagedProvider } from "@/shared/utils/cline"
 import { Controller as SdkController } from "./SdkController"
@@ -397,114 +394,6 @@ describe("SDK remote-config coordination", () => {
 				undefined,
 				"yesButtonClicked",
 				"error",
-			)
-		})
-	})
-
-	describe("after a cloud start fails before it has a session", () => {
-		const input = { prompt: "cloud prompt", images: ["img"], repoUrl: "https://github.com/cline/fixture", branch: "main" }
-		const cloudTarget = { repoUrl: input.repoUrl, branch: input.branch }
-
-		function controllerShowingCloudStartError(unconfirmedAsk?: ClineMessage) {
-			const controller = {
-				task: undefined as TaskProxy | undefined,
-				turnStateTracker: {
-					set: vi.fn(),
-					get: (): TurnState => ({ phase: "error", anchorTs: unconfirmedAsk?.ts, seq: 1 }),
-				},
-				messageTranslatorState: { clearTurnOutcome: vi.fn() },
-				messages: { appendAndEmit: vi.fn() },
-				sessions: { getActiveSession: () => undefined },
-				cloud: { isCloudSessionId: () => true, getCurrentTaskInfo: () => ({ status: "unknown" }) },
-				postStateToWebview: vi.fn(async () => {}),
-				initTask: vi.fn(async () => "ses-retried"),
-				followups: { askResponse: vi.fn(async () => {}) },
-				cancelTask: vi.fn(async () => {}),
-				askResponse(prompt?: string, images?: string[], files?: string[]) {
-					return SdkController.prototype.askResponse.call(controller as never, prompt, images, files)
-				},
-			}
-			const errorTask = createTaskProxy("cloud-provisioning-1", controller.askResponse, controller.cancelTask)
-			controller.task = errorTask
-			if (unconfirmedAsk) errorTask.messageStateHandler.addMessages([unconfirmedAsk])
-			else SdkController.prototype["offerCloudStartRetry"].call(controller as never, errorTask, input)
-			return { controller, errorTask }
-		}
-
-		it("keeps unconfirmed-create guidance and its anchor when a stale Retry reaches the controller", async () => {
-			const message = "Cloud session creation could not be confirmed. Check History or the cloud dashboard."
-			const ask: ClineMessage = {
-				ts: Date.now() + 1_000,
-				type: "ask",
-				ask: "api_req_failed",
-				text: new ClineError({ message, code: CLOUD_CREATION_UNCONFIRMED_ERROR_CODE }).serialize(),
-			}
-			const { controller, errorTask } = controllerShowingCloudStartError(ask)
-			await errorTask.handleWebviewAskResponse("yesButtonClicked")
-			expect(controller.initTask).not.toHaveBeenCalled()
-			expect(controller.followups.askResponse).not.toHaveBeenCalled()
-			expect(controller.messages.appendAndEmit).toHaveBeenCalledWith(
-				[expect.objectContaining({ say: "error", text: message })],
-				expect.objectContaining({ type: "status" }),
-			)
-			expect(controller.messages.appendAndEmit.mock.calls[0]?.[0][0].ts).toBeGreaterThan(ask.ts)
-			expect(controller.turnStateTracker.set).toHaveBeenCalledWith("error", ask.ts)
-		})
-
-		it("starts the same cloud task again when Retry is clicked", async () => {
-			const { controller, errorTask } = controllerShowingCloudStartError()
-			await errorTask.handleWebviewAskResponse("yesButtonClicked")
-			expect(controller.initTask).toHaveBeenCalledWith(
-				"cloud prompt",
-				["img"],
-				undefined,
-				undefined,
-				undefined,
-				cloudTarget,
-			)
-			expect(controller.messages.appendAndEmit).not.toHaveBeenCalled()
-		})
-
-		it("keeps the original attachments when Retry arrives with the webview's empty image list", async () => {
-			const { controller, errorTask } = controllerShowingCloudStartError()
-			// Protobuf decodes the Retry request's omitted repeated images field as an empty array.
-			await errorTask.handleWebviewAskResponse("yesButtonClicked", "", [])
-			expect(controller.initTask).toHaveBeenCalledWith(
-				"cloud prompt",
-				["img"],
-				undefined,
-				undefined,
-				undefined,
-				cloudTarget,
-			)
-		})
-
-		it("starts a cloud task on the same target with a prompt typed into the composer", async () => {
-			const { controller, errorTask } = controllerShowingCloudStartError()
-			await errorTask.handleWebviewAskResponse("messageResponse", "revised prompt")
-			expect(controller.initTask).toHaveBeenCalledWith(
-				"revised prompt",
-				undefined,
-				undefined,
-				undefined,
-				undefined,
-				cloudTarget,
-			)
-		})
-
-		it("advances the turn phase when it refuses a response to a session that is gone", async () => {
-			const { controller, errorTask } = controllerShowingCloudStartError()
-			// The retry is consumed by the first response; a second one finds no session to send to.
-			await errorTask.handleWebviewAskResponse("yesButtonClicked")
-			controller.initTask.mockClear()
-
-			await errorTask.handleWebviewAskResponse("yesButtonClicked")
-
-			expect(controller.initTask).not.toHaveBeenCalled()
-			expect(controller.messages.appendAndEmit).toHaveBeenCalledOnce()
-			expect(controller.turnStateTracker.set).toHaveBeenCalledWith("error")
-			expect(controller.turnStateTracker.set.mock.invocationCallOrder[0]).toBeLessThan(
-				controller.postStateToWebview.mock.invocationCallOrder.at(-1)!,
 			)
 		})
 	})

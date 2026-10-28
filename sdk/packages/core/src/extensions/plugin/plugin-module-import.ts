@@ -16,8 +16,6 @@ const HOST_PROVIDED_SDK_SPECIFIERS = [
 	"@cline/sdk",
 	"@cline/agents",
 	"@cline/core",
-	"@cline/core/hub",
-	"@cline/core/hub/daemon-entry",
 	"@cline/core/telemetry",
 	"@cline/llms",
 	"@cline/llms/browser",

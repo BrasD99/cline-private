@@ -1,7 +1,6 @@
 import { ClineMessage } from "@shared/ExtensionMessage"
 import { ChevronDownIcon, ChevronRightIcon } from "lucide-react"
 import React, { useCallback, useLayoutEffect, useMemo, useState } from "react"
-import { CloudTaskBadge } from "@/components/cloud/CloudTaskBadge"
 import Thumbnails from "@/components/common/Thumbnails"
 import { getModeSpecificFields } from "@/components/settings/utils/providerUtils"
 import { useExtensionState } from "@/context/ExtensionStateContext"
@@ -197,15 +196,11 @@ const TaskHeader: React.FC<TaskHeaderProps> = ({
 							</div>
 						)}
 						<div className="inline-flex flex-wrap gap-y-1 items-center justify-end select-none ml-auto min-w-0">
-							{currentCloudTask ? (
-								<CloudTaskBadge cloudTask={currentCloudTask} />
-							) : (
-								<TaskWorkingDirectoryBadge
-									platform={platform}
-									taskCwd={currentTaskItem?.cwdOnTaskInitialization}
-									workspaceRoots={workspaceRoots}
-								/>
-							)}
+							<TaskWorkingDirectoryBadge
+								platform={platform}
+								taskCwd={currentTaskItem?.cwdOnTaskInitialization}
+								workspaceRoots={workspaceRoots}
+							/>
 							{isCostAvailable && (
 								<div
 									className="mx-1 px-1 py-0.25 rounded-full inline-flex shrink-0 text-badge-background bg-badge-foreground/80 items-center"

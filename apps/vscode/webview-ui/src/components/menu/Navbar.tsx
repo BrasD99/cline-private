@@ -1,4 +1,4 @@
-import { HistoryIcon, PlusIcon, PuzzleIcon, SettingsIcon, UserCircleIcon } from "lucide-react"
+import { HistoryIcon, PlusIcon, SettingsIcon } from "lucide-react"
 import { useMemo } from "react"
 import { Button } from "@/components/ui/button"
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
@@ -9,8 +9,7 @@ interface NavbarProps {
 }
 
 export const Navbar = ({ startNewTask }: NavbarProps) => {
-	const { navigateToHistory, navigateToSettings, navigateToAccount, navigateToMarketplace, navigateToChat } =
-		useExtensionState()
+	const { navigateToHistory, navigateToSettings, navigateToChat } = useExtensionState()
 
 	const SETTINGS_TABS = useMemo(
 		() => [
@@ -30,25 +29,11 @@ export const Navbar = ({ startNewTask }: NavbarProps) => {
 				},
 			},
 			{
-				id: "customize",
-				name: "Customize",
-				tooltip: "Customize",
-				icon: PuzzleIcon,
-				navigate: navigateToMarketplace,
-			},
-			{
 				id: "history",
 				name: "History",
 				tooltip: "History",
 				icon: HistoryIcon,
 				navigate: navigateToHistory,
-			},
-			{
-				id: "account",
-				name: "Account",
-				tooltip: "Account",
-				icon: UserCircleIcon,
-				navigate: navigateToAccount,
 			},
 			{
 				id: "settings",
@@ -58,7 +43,7 @@ export const Navbar = ({ startNewTask }: NavbarProps) => {
 				navigate: navigateToSettings,
 			},
 		],
-		[navigateToAccount, navigateToChat, navigateToHistory, navigateToMarketplace, navigateToSettings, startNewTask],
+		[navigateToChat, navigateToHistory, navigateToSettings, startNewTask],
 	)
 
 	return (

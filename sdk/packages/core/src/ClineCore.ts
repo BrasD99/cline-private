@@ -1,11 +1,8 @@
-import type { BasicLogger, ITelemetryService } from "@cline/shared";
-import {
-	ClineCoreAutomationController,
-	createClineCoreAutomationExtensionContext,
-	createClineCoreAutomationRuntimeHandlers,
-	normalizeAutomationCronScope,
-	normalizeAutomationOptions,
-} from "./cline-core/automation";
+import type {
+	BasicLogger,
+	ExtensionContext,
+	ITelemetryService,
+} from "@cline/shared";
 import {
 	createClineCorePendingPromptsApi,
 	createClineCorePluginCommandsApi,
@@ -18,8 +15,6 @@ import {
 } from "./cline-core/start-input";
 import { emitSessionStartedTelemetry } from "./cline-core/telemetry";
 import type {
-	ClineCoreAutomationApi,
-	ClineCoreAutomationOptions,
 	ClineCoreListHistoryOptions,
 	ClineCoreOptions,
 	ClineCoreSettingsApi,
@@ -30,7 +25,6 @@ import type {
 	RestoreResult,
 	StartSessionBootstrap,
 } from "./cline-core/types";
-import { CronService } from "./cron/service/cron-service";
 import type { RuntimeCapabilities } from "./runtime/capabilities";
 import { normalizeRuntimeCapabilities } from "./runtime/capabilities";
 import { listSessionHistory } from "./runtime/host/history";
@@ -61,17 +55,6 @@ import type { CoreSessionEvent } from "./types/events";
 import type { SessionHistoryRecord } from "./types/sessions";
 
 export type {
-	ClineAutomationEventIngressResult,
-	ClineAutomationEventLog,
-	ClineAutomationEventSuppression,
-	ClineAutomationListEventsOptions,
-	ClineAutomationListRunsOptions,
-	ClineAutomationListSpecsOptions,
-	ClineAutomationRun,
-	ClineAutomationRunStatus,
-	ClineAutomationSpec,
-	ClineCoreAutomationApi,
-	ClineCoreAutomationOptions,
 	ClineCoreListHistoryOptions,
 	ClineCoreOptions,
 	ClineCoreSettingsApi,
@@ -101,7 +84,6 @@ export type {
 export class ClineCore {
 	readonly clientName: string | undefined;
 	readonly runtimeAddress: string | undefined;
-	readonly automation: ClineCoreAutomationApi;
 	readonly settings: ClineCoreSettingsApi;
 	readonly pluginCommands: PluginCommandsApi;
 	readonly featureFlags: FeatureFlagsService;
@@ -112,7 +94,6 @@ export class ClineCore {
 	private readonly logger: BasicLogger | undefined;
 	private readonly telemetry: ITelemetryService | undefined;
 	private readonly distinctId: string | undefined;
-	private readonly automationService: CronService | undefined;
 	private readonly activeSessionBootstraps = new Map<
 		string,
 		StartSessionBootstrap
@@ -129,9 +110,6 @@ export class ClineCore {
 		telemetry: ITelemetryService | undefined,
 		distinctId: string | undefined,
 		featureFlags: FeatureFlagsService,
-		automationOptions:
-			| (ClineCoreAutomationOptions & { logger?: BasicLogger })
-			| undefined,
 	) {
 		this.clientName = clientName;
 		this.runtimeAddress = runtimeAddress;
@@ -145,44 +123,6 @@ export class ClineCore {
 		this.settings = createClineCoreSettingsApi(host);
 		this.pluginCommands = createClineCorePluginCommandsApi(host);
 		this.pendingPrompts = createClineCorePendingPromptsApi(host);
-		this.automation = new ClineCoreAutomationController(() => {
-			if (!this.automationService) {
-				throw new Error(
-					"ClineCore automation is not enabled. Pass `automation: true` or automation options to ClineCore.create().",
-				);
-			}
-			return this.automationService;
-		});
-		this.automationService = automationOptions
-			? new CronService({
-					workspaceRoot: automationOptions.workspaceRoot ?? process.cwd(),
-					specs: {
-						cronSpecsDir:
-							automationOptions.cronSpecsDir ?? automationOptions.cronDir,
-						scope: normalizeAutomationCronScope(automationOptions.cronScope),
-						workspaceRoot: automationOptions.workspaceRoot,
-					},
-					runtimeHandlers: createClineCoreAutomationRuntimeHandlers({
-						host,
-						getExtensionContext: () =>
-							createClineCoreAutomationExtensionContext({
-								automationService: this.automationService,
-								automation: this.automation,
-								clientName: this.clientName,
-								distinctId: this.distinctId,
-								logger: this.logger,
-								telemetry: this.telemetry,
-							}),
-					}),
-					dbPath: automationOptions.dbPath,
-					logger: automationOptions.logger,
-					telemetry: this.telemetry,
-					pollIntervalMs: automationOptions.pollIntervalMs,
-					claimLeaseSeconds: automationOptions.claimLeaseSeconds,
-					globalMaxConcurrency: automationOptions.globalMaxConcurrency,
-					watcherDebounceMs: automationOptions.watcherDebounceMs,
-				})
-			: undefined;
 		this.unsubscribeBootstrapCleanup = this.host.subscribe((event) => {
 			if (event.type !== "ended") {
 				return;
@@ -214,7 +154,6 @@ export class ClineCore {
 		const capabilities = normalizeRuntimeCapabilities(options.capabilities);
 		const normalizedOptions = { ...options, capabilities, distinctId };
 		const host = await createRuntimeHost(normalizedOptions);
-		const automationOptions = normalizeAutomationOptions(options.automation);
 		const featureFlags =
 			options.featureFlags ||
 			new FeatureFlagsService({
@@ -236,14 +175,31 @@ export class ClineCore {
 			options.telemetry,
 			distinctId,
 			featureFlags,
-			automationOptions
-				? { ...automationOptions, logger: options.logger }
-				: undefined,
 		);
-		if (automationOptions && automationOptions.autoStart !== false) {
-			await core.automation.start();
-		}
 		return core;
+	}
+
+	private extensionContext(
+		context: ExtensionContext | undefined,
+	): ExtensionContext | undefined {
+		const client =
+			context?.client ??
+			(this.clientName ? { name: this.clientName } : undefined);
+		const user =
+			context?.user ??
+			(this.distinctId ? { distinctId: this.distinctId } : undefined);
+		const logger = context?.logger ?? this.logger;
+		const telemetry = context?.telemetry ?? this.telemetry;
+		if (!client && !user && !logger && !telemetry) {
+			return context;
+		}
+		return {
+			...(context ?? {}),
+			...(client ? { client } : {}),
+			...(user ? { user } : {}),
+			...(logger ? { logger } : {}),
+			...(telemetry ? { telemetry } : {}),
+		};
 	}
 
 	private async disposeSessionBootstrap(sessionId: string): Promise<void> {
@@ -298,16 +254,7 @@ export class ClineCore {
 			const result = await this.host.startSession(
 				normalizeClineCoreStartInput(preparedInput, {
 					defaultCapabilities: this.capabilities,
-					withExtensionContext: (context) =>
-						createClineCoreAutomationExtensionContext({
-							automationService: this.automationService,
-							automation: this.automation,
-							context,
-							clientName: this.clientName,
-							distinctId: this.distinctId,
-							logger: this.logger,
-							telemetry: this.telemetry,
-						}),
+					withExtensionContext: (context) => this.extensionContext(context),
 				}),
 			);
 			if (bootstrap) {
@@ -410,7 +357,6 @@ export class ClineCore {
 	 */
 	dispose: RuntimeHost["dispose"] = async (...args) => {
 		try {
-			await this.automationService?.dispose();
 			await this.host.dispose(...args);
 		} finally {
 			this.unsubscribeBootstrapCleanup();
@@ -566,16 +512,7 @@ export class ClineCore {
 		const normalizedStart = input.start
 			? normalizeClineCoreStartInput(input.start, {
 					defaultCapabilities: this.capabilities,
-					withExtensionContext: (context) =>
-						createClineCoreAutomationExtensionContext({
-							automationService: this.automationService,
-							automation: this.automation,
-							context,
-							clientName: this.clientName,
-							distinctId: this.distinctId,
-							logger: this.logger,
-							telemetry: this.telemetry,
-						}),
+					withExtensionContext: (context) => this.extensionContext(context),
 				})
 			: undefined;
 		return this.host.restoreSession({

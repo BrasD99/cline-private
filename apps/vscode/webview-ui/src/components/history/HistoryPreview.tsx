@@ -1,8 +1,6 @@
 import { StringRequest } from "@shared/proto/cline/common"
 import { memo, useMemo } from "react"
-import { CloudStatusPill } from "@/components/cloud/CloudStatusPill"
 import { useExtensionState } from "@/context/ExtensionStateContext"
-import { useResolvedCloudStatuses } from "@/hooks/useResolvedCloudStatuses"
 import { useUsageCostVisibility } from "@/hooks/useUsageCostVisibility"
 import { TaskServiceClient } from "@/services/grpc-client"
 
@@ -13,7 +11,6 @@ type HistoryPreviewProps = {
 const HistoryPreview = ({ showHistoryView }: HistoryPreviewProps) => {
 	const { taskHistory } = useExtensionState()
 	const previewItems = useMemo(() => taskHistory.filter((item) => item.ts && item.task).slice(0, 3), [taskHistory])
-	const resolvedCloudStatuses = useResolvedCloudStatuses(previewItems)
 	const isCostVisible = useUsageCostVisibility()
 	const handleHistorySelect = (id: string) => {
 		TaskServiceClient.showTaskWithId(StringRequest.create({ value: id })).catch((error) =>
@@ -165,9 +162,6 @@ const HistoryPreview = ({ showHistoryView }: HistoryPreviewProps) => {
 									)}
 									<div className="history-task-description ph-no-capture">{item.task}</div>
 									{item.isLegacy && <span className="history-cost-chip">Legacy</span>}
-									{item.executionTarget === "cloud" && (
-										<CloudStatusPill status={resolvedCloudStatuses.get(item.id) ?? item.cloudStatus} />
-									)}
 								</div>
 								<div className="history-meta-stack">
 									<span className="history-date">{formatDate(item.ts)}</span>

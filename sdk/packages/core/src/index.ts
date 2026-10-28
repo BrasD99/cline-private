@@ -189,17 +189,6 @@ export type {
 export { ClineCore } from "./ClineCore";
 export { toClineCoreStartInput } from "./cline-core/start-input";
 export type {
-	ClineAutomationEventIngressResult,
-	ClineAutomationEventLog,
-	ClineAutomationEventSuppression,
-	ClineAutomationListEventsOptions,
-	ClineAutomationListRunsOptions,
-	ClineAutomationListSpecsOptions,
-	ClineAutomationRun,
-	ClineAutomationRunStatus,
-	ClineAutomationSpec,
-	ClineCoreAutomationApi,
-	ClineCoreAutomationOptions,
 	ClineCoreListHistoryOptions,
 	ClineCoreOptions,
 	ClineCoreSettingsApi,
@@ -450,9 +439,6 @@ export type {
 	CheckpointEntry,
 	CheckpointMetadata,
 } from "./hooks/checkpoint-hooks";
-export * from "./hub";
-export { HubRuntimeHost } from "./hub/runtime-host/hub-runtime-host";
-export { RemoteRuntimeHost } from "./hub/runtime-host/remote-runtime-host";
 export {
 	hashSecret,
 	sdkDebug,
@@ -1033,8 +1019,6 @@ export {
 	ToolPresets,
 	truncateCommandOutput,
 } from "./extensions/tools";
-export { createHubPluginCommandsApi } from "./hub/client/plugin-commands";
-export * from "./remote/remote-environments";
 export { ensureLoginShellPath } from "./remote/shell-path";
 export { isClineAccountFeatureEnabled } from "./services/feature-flags/cline-account-feature-flags";
 export {

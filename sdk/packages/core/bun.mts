@@ -22,7 +22,6 @@ const runtimeBuildId = resolveSdkRuntimeBuildId(
 // Keep declared runtime packages external so they are not duplicated inside each
 // bundled entrypoint and installed again from package.json.
 const external = [
-	"@cline/core/hub/daemon-entry",
 	...Object.keys({
 		...(packageJson.dependencies ?? {}),
 		...(packageJson.peerDependencies ?? {}),
@@ -51,24 +50,8 @@ const buildConfig = {
 
 const builds: Parameters<typeof Bun.build>[0][] = [
 	{
-		entrypoints: ["./src/cloud/index.ts"],
-		outdir: "./dist/cloud",
-		...buildConfig,
-	},
-	// Build main exports separately to avoid Bun bundler output path conflicts
-	{
 		entrypoints: ["./src/index.ts"],
 		outdir: "./dist",
-		...buildConfig,
-	},
-	{
-		entrypoints: ["./src/hub/index.ts"],
-		outdir: "./dist/hub",
-		...buildConfig,
-	},
-	{
-		entrypoints: ["./src/hub/daemon/entry.ts"],
-		outdir: "./dist/hub/daemon",
 		...buildConfig,
 	},
 	{

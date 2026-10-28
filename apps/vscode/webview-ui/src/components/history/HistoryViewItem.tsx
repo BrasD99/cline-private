@@ -1,4 +1,3 @@
-import { formatRepoLabel } from "@shared/cloud/cloud-sessions"
 import { HistoryItem } from "@shared/HistoryItem"
 import { StringRequest } from "@shared/proto/cline/common"
 import type { TaskItem } from "@shared/proto/cline/task"
@@ -15,7 +14,6 @@ import {
 	TrashIcon,
 } from "lucide-react"
 import { memo, useCallback, useMemo, useState } from "react"
-import { CloudStatusPill } from "@/components/cloud/CloudStatusPill"
 import { Button } from "@/components/ui/button"
 import { useUsageCostVisibility } from "@/hooks/useUsageCostVisibility"
 import { cn } from "@/lib/utils"
@@ -110,7 +108,6 @@ const HistoryViewItem = ({
 							Legacy
 						</span>
 					)}
-					{isCloud && <CloudStatusPill status={item.cloudStatus} />}
 					<div className="flex gap-2 flex-shrink-0">
 						<Button
 							aria-label="Delete"
@@ -213,16 +210,6 @@ const HistoryViewItem = ({
 										<div className="flex justify-between items-center w-full gap-1 text-xs">
 											<span className="font-medium text-description">Model:</span>
 											<span className="text-description">{item.modelId}</span>
-										</div>
-									)}
-
-									{isCloud && item.cloudRepoUrl && (
-										<div className="flex justify-between items-center w-full gap-1 text-xs">
-											<span className="font-medium text-description">Repository:</span>
-											<span className="text-description truncate">
-												{formatRepoLabel(item.cloudRepoUrl)}
-												{item.cloudBranch ? ` @ ${item.cloudBranch}` : ""}
-											</span>
 										</div>
 									)}
 

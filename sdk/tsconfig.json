@@ -17,10 +17,6 @@
 			],
 			"@cline/cline-hub": ["./apps/cline-hub/src/server.ts"],
 			"@cline/core": ["./packages/core/src/index.ts"],
-			"@cline/core/hub": ["./packages/core/src/hub/index.ts"],
-			"@cline/core/hub/daemon-entry": [
-				"./packages/core/src/hub/daemon/entry.ts"
-			],
 			"@cline/core/telemetry": [
 				"./packages/core/src/services/telemetry/index.ts"
 			],

@@ -8,7 +8,6 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip
 import { PLATFORM_CONFIG, PlatformType } from "@/config/platform.config"
 import { useExtensionState } from "@/context/ExtensionStateContext"
 import { useProviderListings } from "@/hooks/useProviderListings"
-import { OPENROUTER_MODEL_PICKER_Z_INDEX } from "./OpenRouterModelPicker"
 import { AddOpenAiConnectionForm } from "./providers/AddOpenAiConnectionForm"
 import { OpenAICompatibleProvider } from "./providers/OpenAICompatible"
 import { useApiConfigurationHandlers } from "./utils/useApiConfigurationHandlers"
@@ -23,7 +22,7 @@ interface ApiOptionsProps {
 }
 
 // This is necessary to ensure dropdown opens downward, important for when this is used in popup
-export const DROPDOWN_Z_INDEX = OPENROUTER_MODEL_PICKER_Z_INDEX + 2 // Higher than the OpenRouterModelPicker's and ModelSelectorTooltip's z-index
+export const DROPDOWN_Z_INDEX = 1_002
 
 export const DropdownContainer = styled.div<{ zIndex?: number }>`
 	position: relative;

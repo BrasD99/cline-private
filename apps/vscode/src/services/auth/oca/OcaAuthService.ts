@@ -128,7 +128,7 @@ export class OcaAuthService {
 	}
 
 	async createAuthRequest(): Promise<ProtoString> {
-		throw new Error("Oracle Code Assist login is disabled")
+		return ProtoString.create({ value: "" })
 	}
 
 	async handleDeauth(_: LogoutReason = LogoutReason.UNKNOWN): Promise<void> {

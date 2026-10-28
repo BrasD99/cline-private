@@ -1,17 +1,6 @@
-import {
-	decodeJwtPayload,
-	getClineEnvironmentConfig,
-	type ITelemetryService,
-} from "@cline/shared";
+import { decodeJwtPayload, type ITelemetryService } from "@cline/shared";
 import type { ProviderSettingsManager } from "../services/storage/provider-settings-manager";
 import type { ProviderSettings } from "../types/provider-settings";
-import {
-	type ClineOAuthCredentials,
-	getValidClineCredentials,
-	loginClineOAuth,
-} from "./cline";
-import { getValidOpenAICodexCredentials, loginOpenAICodex } from "./codex";
-import { getValidOcaCredentials, loginOcaOAuth } from "./oca";
 import type { OAuthCredentials, OAuthLoginCallbacks } from "./types";
 
 export type ProviderOAuthCredentials = OAuthCredentials;
@@ -48,14 +37,6 @@ export interface ProviderAuthHandler {
 	saveCredentials(input: ProviderAuthSaveCredentialsInput): ProviderSettings;
 	isConfigured(settings: ProviderSettings | undefined): boolean;
 	normalizeStoredAccessToken?(accessToken: string): string;
-}
-
-function formatClineApiKey(accessToken: string): string {
-	return accessToken.trim();
-}
-
-function stripClineApiKeyPrefix(accessToken: string): string {
-	return accessToken.trim();
 }
 
 function readExpiryFromToken(accessToken: string): number | null {
@@ -112,157 +93,7 @@ function createCredentialsFromSettings(
 	};
 }
 
-function saveOAuthCredentials(input: {
-	manager: ProviderSettingsManager;
-	storageProviderId: string;
-	settings?: ProviderSettings;
-	credentials: ProviderOAuthCredentials;
-	formatAccessToken?: (accessToken: string) => string;
-	setLastUsed?: boolean;
-	save?: boolean;
-}): ProviderSettings {
-	const accessToken =
-		input.formatAccessToken?.(input.credentials.access) ??
-		input.credentials.access;
-	const auth: NonNullable<ProviderSettings["auth"]> = {
-		...(input.settings?.auth ?? {}),
-		accessToken,
-		refreshToken: input.credentials.refresh,
-		accountId: input.credentials.accountId,
-		expiresAt: input.credentials.expires,
-	};
-	const incomingMetadata = Object.fromEntries(
-		Object.entries(input.credentials.metadata ?? {}).filter(
-			([, value]) => value !== undefined,
-		),
-	);
-	const metadata = {
-		...(input.settings?.auth?.metadata ?? {}),
-		...incomingMetadata,
-	};
-	if (Object.keys(metadata).length > 0) {
-		auth.metadata = metadata;
-	}
-
-	const merged: ProviderSettings = {
-		...(input.settings ?? {
-			provider: input.storageProviderId as ProviderSettings["provider"],
-		}),
-		provider: input.storageProviderId as ProviderSettings["provider"],
-		auth,
-	};
-	if (input.save !== false) {
-		input.manager.saveProviderSettings(merged, {
-			...(input.setLastUsed === undefined
-				? {}
-				: { setLastUsed: input.setLastUsed }),
-			tokenSource: "oauth",
-		});
-	}
-	return merged;
-}
-
-function createOAuthHandler(input: {
-	providerId: string;
-	storageProviderId?: string;
-	formatAccessToken?: (accessToken: string) => string;
-	normalizeStoredAccessToken?: (accessToken: string) => string;
-	login: (input: ProviderAuthLoginInput) => Promise<ProviderOAuthCredentials>;
-	refresh: (
-		input: ProviderAuthRefreshInput,
-	) => Promise<ProviderOAuthCredentials | null>;
-}): ProviderAuthHandler {
-	const storageProviderId = input.storageProviderId ?? input.providerId;
-	return {
-		providerId: input.providerId,
-		storageProviderId,
-		getApiKey(settings) {
-			const accessToken = settings?.auth?.accessToken?.trim();
-			if (accessToken) {
-				return input.formatAccessToken?.(accessToken) ?? accessToken;
-			}
-
-			return (
-				settings?.apiKey?.trim() || settings?.auth?.apiKey?.trim() || undefined
-			);
-		},
-		login: input.login,
-		refresh: input.refresh,
-		saveCredentials(saveInput) {
-			return saveOAuthCredentials({
-				...saveInput,
-				storageProviderId,
-				formatAccessToken: input.formatAccessToken,
-			});
-		},
-		isConfigured(settings) {
-			return !!settings?.auth?.accessToken;
-		},
-		normalizeStoredAccessToken: input.normalizeStoredAccessToken,
-	};
-}
-
-function createClineAuthHandler(input: {
-	providerId: string;
-	storageProviderId?: string;
-}): ProviderAuthHandler {
-	return createOAuthHandler({
-		providerId: input.providerId,
-		storageProviderId: input.storageProviderId,
-		formatAccessToken: formatClineApiKey,
-		normalizeStoredAccessToken: stripClineApiKeyPrefix,
-		login: ({ settings, callbacks, telemetry }) =>
-			loginClineOAuth({
-				apiBaseUrl:
-					settings?.baseUrl?.trim() || getClineEnvironmentConfig().apiBaseUrl,
-				useWorkOSDeviceAuth: true,
-				callbacks,
-				telemetry,
-			}),
-		refresh: ({ settings, credentials, forceRefresh, telemetry }) =>
-			getValidClineCredentials(
-				credentials as ClineOAuthCredentials,
-				{
-					apiBaseUrl:
-						settings.baseUrl?.trim() || getClineEnvironmentConfig().apiBaseUrl,
-					telemetry,
-				},
-				{ forceRefresh },
-			),
-	});
-}
-
-const providerAuthHandlers = [
-	createClineAuthHandler({ providerId: "cline" }),
-	createClineAuthHandler({
-		providerId: "cline-pass",
-		storageProviderId: "cline",
-	}),
-	createOAuthHandler({
-		providerId: "oca",
-		login: ({ settings, callbacks, telemetry }) =>
-			loginOcaOAuth({ mode: settings?.oca?.mode, callbacks, telemetry }),
-		refresh: ({ settings, credentials, forceRefresh, telemetry }) =>
-			getValidOcaCredentials(
-				credentials,
-				{ forceRefresh, telemetry },
-				{ mode: settings.oca?.mode, telemetry },
-			),
-	}),
-	createOAuthHandler({
-		providerId: "openai-codex",
-		login: ({ callbacks, telemetry }) =>
-			loginOpenAICodex({
-				onAuth: callbacks.onAuth,
-				onPrompt: callbacks.onPrompt,
-				onProgress: callbacks.onProgress,
-				onManualCodeInput: callbacks.onManualCodeInput,
-				telemetry,
-			}),
-		refresh: ({ credentials, forceRefresh, telemetry }) =>
-			getValidOpenAICodexCredentials(credentials, { forceRefresh, telemetry }),
-	}),
-] as const satisfies readonly ProviderAuthHandler[];
+const providerAuthHandlers: readonly ProviderAuthHandler[] = [];
 
 const providerAuthHandlerById = new Map<string, ProviderAuthHandler>(
 	providerAuthHandlers.map((handler) => [handler.providerId, handler]),

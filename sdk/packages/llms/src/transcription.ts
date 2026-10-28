@@ -19,8 +19,8 @@ import {
 
 export const DEFAULT_TRANSCRIPTION_TIMEOUT_MS = 120_000;
 const DEFAULT_OPENAI_BASE_URL = "";
-const DEFAULT_ELEVENLABS_BASE_URL = "https://api.elevenlabs.io/v1";
-const DEFAULT_VERCEL_AI_GATEWAY_BASE_URL = "https://ai-gateway.vercel.sh/v4/ai";
+const DEFAULT_ELEVENLABS_BASE_URL = "";
+const DEFAULT_VERCEL_AI_GATEWAY_BASE_URL = "";
 
 export interface AudioTranscriptionRequest {
 	providerConfig: ProviderConfig;

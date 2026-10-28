@@ -34,30 +34,27 @@ const AboutSection = ({ version, extensionVariant, renderSectionHeader }: AboutS
 
 					<h3 className="text-md font-semibold">Community & Support</h3>
 					<p>
-						<VSCodeLink href="https://x.com/cline">X</VSCodeLink>
+						<VSCodeLink href="">X</VSCodeLink>
 						{" • "}
-						<VSCodeLink href="https://discord.gg/cline">Discord</VSCodeLink>
+						<VSCodeLink href="">Discord</VSCodeLink>
 						{" • "}
-						<VSCodeLink href="https://www.reddit.com/r/cline/"> r/cline</VSCodeLink>
+						<VSCodeLink href=""> r/cline</VSCodeLink>
 					</p>
 
 					<h3 className="text-md font-semibold">Development</h3>
 					<p>
-						<VSCodeLink href="https://github.com/cline/cline">GitHub</VSCodeLink>
+						<VSCodeLink href="">GitHub</VSCodeLink>
 						{" • "}
-						<VSCodeLink href="https://github.com/cline/cline/issues"> Issues</VSCodeLink>
+						<VSCodeLink href=""> Issues</VSCodeLink>
 						{" • "}
-						<VSCodeLink href="https://github.com/cline/cline/discussions/categories/feature-requests?discussions_q=is%3Aopen+category%3A%22Feature+Requests%22+sort%3Atop">
-							{" "}
-							Feature Requests
-						</VSCodeLink>
+						<VSCodeLink href=""> Feature Requests</VSCodeLink>
 					</p>
 
 					<h3 className="text-md font-semibold">Resources</h3>
 					<p>
-						<VSCodeLink href="https://docs.cline.bot/">Documentation</VSCodeLink>
+						<VSCodeLink href="">Documentation</VSCodeLink>
 						{" • "}
-						<VSCodeLink href="https://cline.bot/">https://cline.bot</VSCodeLink>
+						<VSCodeLink href="">Cline Private</VSCodeLink>
 					</p>
 				</div>
 			</Section>

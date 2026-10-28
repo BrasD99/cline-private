@@ -469,10 +469,7 @@ const ClineRulesToggleModal: React.FC = () => {
 								<p>
 									Rules allow you to provide Cline with system-level guidance. Think of them as a persistent way
 									to include context and preferences for your projects or globally for every conversation.{" "}
-									<VSCodeLink
-										className="text-xs"
-										href="https://docs.cline.bot/features/cline-rules"
-										style={{ display: "inline", fontSize: "inherit" }}>
+									<VSCodeLink className="text-xs" href="" style={{ display: "inline", fontSize: "inherit" }}>
 										Docs
 									</VSCodeLink>
 								</p>
@@ -481,9 +478,7 @@ const ClineRulesToggleModal: React.FC = () => {
 									Workflows allow you to define a series of steps to guide Cline through a repetitive set of
 									tasks, such as deploying a service or submitting a PR. To invoke a workflow, type{" "}
 									<span className="text-foreground font-bold">/workflow-name</span> in the chat.{" "}
-									<VSCodeLink
-										className="text-xs inline"
-										href="https://docs.cline.bot/features/slash-commands/workflows">
+									<VSCodeLink className="text-xs inline" href="">
 										Docs
 									</VSCodeLink>
 								</p>
@@ -606,9 +601,7 @@ const ClineRulesToggleModal: React.FC = () => {
 									<i className="codicon codicon-warning text-sm" />
 									<span className="text-base">
 										Workflows are being deprecated. Use skills instead.{" "}
-										<VSCodeLink
-											href="https://docs.cline.bot/customization/skills"
-											style={{ display: "inline", fontSize: "inherit" }}>
+										<VSCodeLink href="" style={{ display: "inline", fontSize: "inherit" }}>
 											Learn more
 										</VSCodeLink>
 									</span>
@@ -677,7 +670,7 @@ const ClineRulesToggleModal: React.FC = () => {
 											: "Toggle to enable/disable (chmod +x/-x)."}{" "}
 										<VSCodeLink
 											className="text-xs"
-											href="https://docs.cline.bot/features/hooks"
+											href=""
 											style={{ display: "inline", fontSize: "inherit" }}>
 											Docs
 										</VSCodeLink>

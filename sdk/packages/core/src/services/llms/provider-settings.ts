@@ -1,10 +1,6 @@
 import * as Llms from "@cline/llms";
 import { ReasoningLevelSchema } from "@cline/shared";
 import { z } from "zod";
-import {
-	DEFAULT_EXTERNAL_OCA_BASE_URL,
-	DEFAULT_INTERNAL_OCA_BASE_URL,
-} from "../../auth/oca";
 import { getPersistedProviderApiKey } from "../../auth/provider-auth-registry";
 import {
 	OPENAI_COMPATIBLE_PROVIDERS,
@@ -226,11 +222,7 @@ export function toProviderConfig(
 			normalizedProviderId,
 			settings.apiLine,
 		) ??
-		(normalizedProviderId === "oca"
-			? settings.oca?.mode === "internal"
-				? DEFAULT_INTERNAL_OCA_BASE_URL
-				: DEFAULT_EXTERNAL_OCA_BASE_URL
-			: providerDefaults?.baseUrl);
+		(normalizedProviderId === "oca" ? "" : providerDefaults?.baseUrl);
 	const routingProviderId =
 		settings.routingProviderId ??
 		(shouldRouteThroughOpenAIResponses(settings) &&

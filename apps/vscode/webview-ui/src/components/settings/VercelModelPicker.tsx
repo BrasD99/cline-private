@@ -298,9 +298,7 @@ const VercelModelPicker: React.FC<VercelModelPickerProps> = ({ isPopup, currentM
 					{Object.keys(vercelAiGatewayModels).length === 0 ? (
 						<>
 							Enter your Vercel AI Gateway API key above to load available models. You can get an API key from{" "}
-							<VSCodeLink
-								href="https://vercel.com/d?to=%2F%5Bteam%5D%2F%7E%2Fai"
-								style={{ display: "inline", fontSize: "inherit" }}>
+							<VSCodeLink href="" style={{ display: "inline", fontSize: "inherit" }}>
 								Vercel AI Gateway.
 							</VSCodeLink>
 						</>

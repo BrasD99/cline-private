@@ -25,7 +25,7 @@ export const BaseUrlField = ({
 	onChange,
 	onClear,
 	label = "Use custom base URL",
-	placeholder = "Default: https://api.example.com",
+	placeholder = "Default: ",
 	disabled = false,
 	showLockIcon = false,
 }: BaseUrlFieldProps) => {

@@ -460,17 +460,16 @@ export function isOllamaQwen3ModelIdFallback(
 
 export function isCerebrasProvider(
 	request: Pick<GatewayStreamRequest, "providerId">,
-	context: GatewayProviderContext,
+	_context: GatewayProviderContext,
 ): boolean {
 	const providerIds = [
 		request.providerId,
-		context.config.providerId,
-		context.provider.id,
+		_context.config.providerId,
+		_context.provider.id,
 	].map((id) => id.toLowerCase());
 
 	return (
-		providerIds.includes("cerebras") ||
-		isProviderBaseOrigin(context, "https://api.cerebras.ai")
+		providerIds.includes("cerebras") || isProviderBaseOrigin(_context, "")
 	);
 }
 

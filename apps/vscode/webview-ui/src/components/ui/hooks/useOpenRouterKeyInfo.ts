@@ -2,7 +2,6 @@ import { useEffect, useState } from "react"
 import { z } from "zod"
 
 const CACHE_DURATION_MS = 30 * 1000 // 30 seconds
-const OpenRouterBaseURL = "https://openrouter.ai/api/v1"
 
 // Define schema for OpenRouter key response
 const openRouterKeyInfoSchema = z.object({
@@ -24,38 +23,8 @@ export type OpenRouterKeyInfo = z.infer<typeof openRouterKeyInfoSchema>["data"]
 let moduleCachedData: OpenRouterKeyInfo | null = null
 let moduleLastFetchTime: number | null = null
 
-async function getOpenRouterKeyInfo(apiKey: string, signal: AbortSignal): Promise<OpenRouterKeyInfo | null> {
-	try {
-		const keyEndpoint = `${OpenRouterBaseURL}/key`
-		const response = await fetch(keyEndpoint, {
-			headers: {
-				Authorization: `Bearer ${apiKey}`,
-			},
-			signal,
-		})
-
-		if (!response.ok) {
-			if (response.status === 401) {
-				console.warn("OpenRouter API key is invalid or unauthorized.")
-			} else {
-				console.error(`Error fetching OpenRouter key info: HTTP ${response.status}`)
-			}
-			return null
-		}
-
-		const responseData = await response.json()
-		const result = openRouterKeyInfoSchema.safeParse(responseData)
-		if (!result.success) {
-			console.error("OpenRouter API key info validation failed:", result.error.flatten().fieldErrors)
-			return null
-		}
-		return result.data.data
-	} catch (error: any) {
-		if (error.name !== "AbortError") {
-			console.error("Error fetching OpenRouter key info:", error)
-		}
-		return null
-	}
+async function getOpenRouterKeyInfo(_apiKey: string, _signal: AbortSignal): Promise<OpenRouterKeyInfo | null> {
+	return null
 }
 
 /**

@@ -339,63 +339,11 @@ function buildModelFromPrivateSource(
 	};
 }
 
-interface BasetenModelResponse {
-	id?: string;
-	object?: string;
-	supported_features?: string[];
-	context_length?: number;
-	max_completion_tokens?: number;
-}
-
 async function fetchBasetenPrivateModels(
 	_config: ProviderConfig,
-	token: string,
+	_token: string,
 ): Promise<Record<string, ModelInfo>> {
-	const response = await fetchWithTimeout(
-		"https://inference.baseten.co/v1/models",
-		{
-			method: "GET",
-			headers: {
-				Authorization: `Bearer ${token}`,
-				"Content-Type": "application/json",
-			},
-		},
-	);
-	if (!response.ok) {
-		throw new Error(`Baseten model refresh failed: HTTP ${response.status}`);
-	}
-
-	const payload = (await response.json()) as { data?: BasetenModelResponse[] };
-	const entries = payload?.data ?? [];
-	const models: Record<string, ModelInfo> = {};
-	for (const model of entries) {
-		const id = model.id?.trim();
-		if (!id) {
-			continue;
-		}
-		if (
-			id.includes("whisper") ||
-			id.includes("tts") ||
-			id.includes("embedding")
-		) {
-			continue;
-		}
-		const features = model.supported_features ?? [];
-		models[id] = buildModelFromPrivateSource(id, {
-			name: id,
-			contextWindow: model.context_length,
-			maxInputTokens: model.context_length,
-			maxTokens: model.max_completion_tokens,
-			supportsReasoning:
-				features.includes("reasoning") || features.includes("reasoning_effort"),
-			supportsImages: false,
-		});
-	}
-	return models;
-}
-
-interface HicapModelResponse {
-	id?: string;
+	return {};
 }
 
 interface PoolsideModelResponse {
@@ -428,45 +376,19 @@ function parseOptionalNumber(
 
 async function fetchHicapPrivateModels(
 	_config: ProviderConfig,
-	token: string,
+	_token: string,
 ): Promise<Record<string, ModelInfo>> {
-	const response = await fetchWithTimeout(
-		"https://api.hicap.ai/v2/openai/models",
-		{
-			method: "GET",
-			headers: {
-				"api-key": token,
-			},
-		},
-	);
-	if (!response.ok) {
-		throw new Error(`Hicap model refresh failed: HTTP ${response.status}`);
-	}
-
-	const payload = (await response.json()) as { data?: HicapModelResponse[] };
-	const entries = payload?.data ?? [];
-	const models: Record<string, ModelInfo> = {};
-	for (const model of entries) {
-		const id = model.id?.trim();
-		if (!id) {
-			continue;
-		}
-		models[id] = buildModelFromPrivateSource(id, {
-			name: id,
-			maxInputTokens: 128_000,
-			supportsImages: true,
-			supportsPromptCache: true,
-		});
-	}
-	return models;
+	return {};
 }
 
 async function fetchPoolsidePrivateModels(
 	config: ProviderConfig,
 	token: string,
 ): Promise<Record<string, ModelInfo>> {
-	const baseUrl =
-		normalizeBaseUrl(config.baseUrl) || "https://inference.poolside.ai/v1";
+	const baseUrl = normalizeBaseUrl(config.baseUrl) || "";
+	if (!baseUrl) {
+		return {};
+	}
 	const endpoint = `${baseUrl.replace(/\/+$/, "")}/models`;
 	const response = await fetchWithTimeout(endpoint, {
 		method: "GET",

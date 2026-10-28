@@ -32,7 +32,7 @@ export async function fetchVercelTranscriptionModels(
 ): Promise<Record<string, ModelInfo>> {
 	const baseUrl = resolveVercelAiGatewayBaseUrl(
 		config.baseUrl,
-		"https://ai-gateway.vercel.sh/v4/ai",
+		"",
 	);
 	const endpoint = `${baseUrl.slice(0, -"/v4/ai".length)}/v1/models`;
 	const timeout = AbortSignal.timeout(config.timeoutMs ?? 5_000);

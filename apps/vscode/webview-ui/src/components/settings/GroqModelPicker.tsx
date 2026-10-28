@@ -273,7 +273,7 @@ const GroqModelPicker: React.FC<GroqModelPickerProps> = ({ isPopup, currentMode 
 			) : (
 				<p className="text-xs mt-0 text-(--vscode-descriptionForeground)">
 					The extension automatically fetches the latest list of models available on{" "}
-					<VSCodeLink className="inline text-inherit" href="https://console.groq.com/docs/models">
+					<VSCodeLink className="inline text-inherit" href="">
 						Groq.
 					</VSCodeLink>
 					If you're unsure which model to choose, compare available models by context window, pricing, and capabilities.

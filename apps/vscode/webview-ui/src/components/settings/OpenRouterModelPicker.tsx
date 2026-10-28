@@ -363,7 +363,7 @@ const OpenRouterModelPicker: React.FC<OpenRouterModelPickerProps> = ({ isPopup, 
 						color: "var(--vscode-descriptionForeground)",
 					}}>
 					The extension automatically fetches the latest list of models available on{" "}
-					<VSCodeLink href="https://openrouter.ai/models" style={{ display: "inline", fontSize: "inherit" }}>
+					<VSCodeLink href="" style={{ display: "inline", fontSize: "inherit" }}>
 						OpenRouter.
 					</VSCodeLink>
 					If you're unsure which model to choose, compare available models by context window, pricing, and capabilities.

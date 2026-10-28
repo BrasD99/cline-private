@@ -151,23 +151,6 @@ export {
 	type OAuthClientCallbacksOptions,
 } from "./auth/client";
 export {
-	completeClineDeviceAuth,
-	getValidClineCredentials,
-	loginClineOAuth,
-	refreshClineToken,
-	startClineDeviceAuth,
-} from "./auth/cline";
-export {
-	getValidOpenAICodexCredentials,
-	loginOpenAICodex,
-	refreshOpenAICodexToken,
-} from "./auth/codex";
-export {
-	getValidOcaCredentials,
-	loginOcaOAuth,
-	refreshOcaToken,
-} from "./auth/oca";
-export {
 	formatProviderOAuthApiKey,
 	getPersistedProviderApiKey,
 	getProviderAuthHandler,

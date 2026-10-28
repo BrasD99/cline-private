@@ -12,11 +12,7 @@ export enum LogoutReason {
 	CROSS_WINDOW_SYNC = "cross_window_sync",
 	/** Auth provider encountered an error and cleared tokens */
 	ERROR_RECOVERY = "error_recovery",
-	/**
-	 * Refresh token rejected as invalid/expired — a real involuntary logout.
-	 * For the SDK auth service this value is emitted by the SDK credential
-	 * resolver (getValidClineCredentials), the single owner of that event.
-	 */
+	/** Refresh token rejected as invalid or expired. */
 	TOKEN_INVALID = "token_invalid",
 	/** Restoring the stored session on activation threw an unexpected error */
 	RESTORE_ERROR = "restore_error",

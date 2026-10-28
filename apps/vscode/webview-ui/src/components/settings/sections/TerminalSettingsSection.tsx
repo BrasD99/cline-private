@@ -176,7 +176,7 @@ const TerminalSettingsSection: React.FC<TerminalSettingsSectionProps> = ({ rende
 							<strong>Having terminal issues?</strong> Check our{" "}
 							<a
 								className="text-(--vscode-textLink-foreground) underline hover:no-underline"
-								href="https://docs.cline.bot/troubleshooting/terminal-quick-fixes"
+								href=""
 								rel="noopener noreferrer"
 								target="_blank">
 								Terminal Quick Fixes
@@ -184,7 +184,7 @@ const TerminalSettingsSection: React.FC<TerminalSettingsSectionProps> = ({ rende
 							or the{" "}
 							<a
 								className="text-(--vscode-textLink-foreground) underline hover:no-underline"
-								href="https://docs.cline.bot/troubleshooting/terminal-integration-guide"
+								href=""
 								rel="noopener noreferrer"
 								target="_blank">
 								Complete Troubleshooting Guide

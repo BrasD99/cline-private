@@ -268,7 +268,7 @@ const BasetenModelPicker: React.FC<BasetenModelPickerProps> = ({ isPopup, curren
 			) : (
 				<p className="text-xs mt-0 text-(--vscode-descriptionForeground)">
 					The extension automatically fetches the latest list of models available on{" "}
-					<VSCodeLink className="inline text-inherit" href="https://www.baseten.co/products/model-apis/">
+					<VSCodeLink className="inline text-inherit" href="">
 						Baseten.
 					</VSCodeLink>
 					If you're unsure which model to choose, compare available models by context window, pricing, and capabilities.

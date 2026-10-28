@@ -51,10 +51,8 @@ import { resolveProviderModelCatalogKeys } from "./provider-keys";
 import { GENERATED_PROVIDER_SPECS } from "./providers.generated";
 import { ANTHROPIC_AND_QWEN_CACHE_ROUTING_METADATA } from "./routing/anthropic-compatible";
 
-export const DEFAULT_INTERNAL_OCA_BASE_URL =
-	"https://code-internal.aiservice.us-chicago-1.oci.oraclecloud.com/20250206/app/litellm";
-export const DEFAULT_EXTERNAL_OCA_BASE_URL =
-	"https://code.aiservice.us-chicago-1.oci.oraclecloud.com/20250206/app/litellm";
+export const DEFAULT_INTERNAL_OCA_BASE_URL = "";
+export const DEFAULT_EXTERNAL_OCA_BASE_URL = "";
 const CLINE_PASS_PROVIDER_ID = "cline-pass";
 const OPENAI_CODEX_DEFAULT_MODEL_ID = "gpt-5.6-terra";
 const NATIVE_WEB_SEARCH_MODEL_TOOL_CAPABILITIES: readonly GatewayModelToolCapability[] =
@@ -202,7 +200,7 @@ const BEDROCK_CONFIG_FIELDS: readonly ProviderConfigField[] = [
 		path: "aws.endpoint",
 		label: "Endpoint URL",
 		type: "url",
-		placeholder: "https://bedrock-runtime.us-east-1.amazonaws.com",
+		placeholder: "",
 		description: "Optional custom Bedrock runtime endpoint.",
 	},
 	{
@@ -242,8 +240,8 @@ const OCA_CONFIG_FIELDS: readonly ProviderConfigField[] = [
 ];
 
 const QWEN_API_LINE_BASE_URLS: Readonly<Record<ProviderApiLine, string>> = {
-	china: "https://dashscope.aliyuncs.com/compatible-mode/v1",
-	international: "https://dashscope-intl.aliyuncs.com/compatible-mode/v1",
+	china: "",
+	international: "",
 };
 
 const QWEN_CONFIG_FIELDS: readonly ProviderConfigField[] = [

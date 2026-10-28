@@ -29,7 +29,6 @@ export function aimlapiAttributionHeaders(): Record<string, string> {
 		...(partnerId ? { "X-AIMLAPI-Partner-ID": partnerId } : {}),
 		"X-AIMLAPI-Integration-Repo": "cline/cline",
 		"X-AIMLAPI-Integration-Version": "cline",
-		"HTTP-Referer": "https://cline.bot",
 		"X-Title": "Cline",
 	};
 }

@@ -1,31 +1,12 @@
 import type {
 	AgentModelEvent,
 	GatewayModelDefinition,
-	GatewayProviderFactory,
 	GatewayProviderRegistration,
 	GatewayStreamRequest,
 } from "@cline/shared";
 import { nanoid } from "nanoid";
-import type {
-	ModelInfo,
-	ProviderClient,
-	ProviderProtocol,
-} from "../catalog/types";
-import {
-	createAnthropicProvider,
-	createBedrockProvider,
-	createClaudeCodeProvider,
-	createDifyProvider,
-	createGoogleProvider,
-	createMistralProvider,
-	createOllamaProvider,
-	createOpenAICodexProvider,
-	createOpenAICompatibleProvider,
-	createOpenAIProvider,
-	createOpenCodeProvider,
-	createSapAiCoreProvider,
-	createVertexProvider,
-} from "./ai-sdk";
+import type { ModelInfo } from "../catalog/types";
+import { createOpenAICompatibleProvider } from "./ai-sdk";
 import { BUILTIN_PROVIDER_REGISTRATIONS } from "./builtins-runtime";
 import { createGateway } from "./gateway";
 import { toGatewayModelCapabilities } from "./model-capabilities";
@@ -79,65 +60,6 @@ function toGatewayModelDefinition(
 			releaseDate: model.releaseDate,
 		},
 	};
-}
-
-function resolveFactory(
-	providerId: string,
-	transport?: {
-		client?: ProviderClient;
-		protocol?: ProviderProtocol;
-	},
-): GatewayProviderFactory {
-	if (
-		transport?.client === "openai" ||
-		transport?.protocol === "openai-responses"
-	) {
-		return createOpenAIProvider;
-	}
-	switch (transport?.client) {
-		case "anthropic":
-			return createAnthropicProvider;
-		case "gemini":
-			return createGoogleProvider;
-		case "vertex":
-			return createVertexProvider;
-		case "bedrock":
-			return createBedrockProvider;
-		case "openai-compatible":
-			return createOpenAICompatibleProvider;
-	}
-
-	const normalized = normalizeProviderId(providerId);
-	switch (normalized) {
-		case "openai-codex":
-		case "openai-native":
-			return createOpenAIProvider;
-		case "anthropic":
-		case "minimax":
-			return createAnthropicProvider;
-		case "gemini":
-			return createGoogleProvider;
-		case "vertex":
-			return createVertexProvider;
-		case "bedrock":
-			return createBedrockProvider;
-		case "mistral":
-			return createMistralProvider;
-		case "claude-code":
-			return createClaudeCodeProvider;
-		case "openai-codex-cli":
-			return createOpenAICodexProvider;
-		case "opencode":
-			return createOpenCodeProvider;
-		case "dify":
-			return createDifyProvider;
-		case "ollama":
-			return createOllamaProvider;
-		case "sapaicore":
-			return createSapAiCoreProvider;
-		default:
-			return createOpenAICompatibleProvider;
-	}
 }
 
 /**
@@ -205,11 +127,7 @@ export async function resolveGatewayProviderRegistration(
 			apiKeyEnv: collection.provider.env ?? routedBuiltin?.defaults?.apiKeyEnv,
 		},
 		createProvider:
-			routedBuiltin?.createProvider ??
-			resolveFactory(routedProviderId, {
-				client: config.clientType ?? collection.provider.client,
-				protocol: collection.provider.protocol,
-			}),
+			routedBuiltin?.createProvider ?? createOpenAICompatibleProvider,
 		loadProvider: routedBuiltin?.loadProvider,
 	};
 }
@@ -271,11 +189,7 @@ export function resolveGatewayProviderRegistrationSync(
 			apiKeyEnv: collection.provider.env ?? routedBuiltin?.defaults?.apiKeyEnv,
 		},
 		createProvider:
-			routedBuiltin?.createProvider ??
-			resolveFactory(routedProviderId, {
-				client: config.clientType ?? collection.provider.client,
-				protocol: collection.provider.protocol,
-			}),
+			routedBuiltin?.createProvider ?? createOpenAICompatibleProvider,
 		loadProvider: routedBuiltin?.loadProvider,
 	};
 }

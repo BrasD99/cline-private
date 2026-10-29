@@ -2439,18 +2439,5 @@ function resolveModelProviderKind(
 	}
 }
 
-export const createOpenAIProvider = createAiSdkProvider("openai");
-export const createClineProvider = createAiSdkProvider("cline");
 export const createOpenAICompatibleProvider =
 	createAiSdkProvider("openai-compatible");
-export const createAnthropicProvider = createAiSdkProvider("anthropic");
-export const createGoogleProvider = createAiSdkProvider("google");
-export const createVertexProvider = createAiSdkProvider("vertex");
-export const createBedrockProvider = createAiSdkProvider("bedrock");
-export const createMistralProvider = createAiSdkProvider("mistral");
-export const createClaudeCodeProvider = createAiSdkProvider("claude-code");
-export const createOpenAICodexProvider = createAiSdkProvider("openai-codex");
-export const createOpenCodeProvider = createAiSdkProvider("opencode");
-export const createDifyProvider = createAiSdkProvider("dify");
-export const createOllamaProvider = createAiSdkProvider("ollama");
-export const createSapAiCoreProvider = createAiSdkProvider("sapaicore");

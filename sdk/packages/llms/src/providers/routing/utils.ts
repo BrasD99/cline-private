@@ -45,10 +45,8 @@ export function toProviderOptionsBucket(providerId: string): string {
  * The bucket name must match the AI SDK provider `name`, because the
  * openai-compatible model only applies request-body passthrough from
  * `providerOptions[<name>]` (and its camelCase alias). For almost every
- * provider the name is the gateway provider id, but both Cline gateway ids
- * (`cline` and `cline-pass`) are served by the shared "cline" AI SDK provider
- * (see `createClineProviderModule`) and hit the same Cline API, so their
- * options key to the shared `cline` bucket.
+ * provider the name is the gateway provider id. The ids `cline` and
+ * `cline-pass` share the `cline` options bucket.
  */
 export function buildProviderAndAliasPatch(options: {
 	providerId: string;

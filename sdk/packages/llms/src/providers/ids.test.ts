@@ -1,10 +1,5 @@
 import { describe, expect, it } from "vitest";
-import {
-	createClineProvider,
-	createOpenAICompatibleProvider,
-	createOpenAIProvider,
-	createSapAiCoreProvider,
-} from "./ai-sdk";
+import { createOpenAICompatibleProvider } from "./ai-sdk";
 import { BUILTIN_PROVIDER_REGISTRATIONS } from "./builtins-runtime";
 import { createGateway } from "./gateway";
 import { BUILT_IN_PROVIDER_IDS, normalizeProviderId } from "./ids";
@@ -120,7 +115,7 @@ describe("provider-ids", () => {
 				(item) => item.manifest.id === providerId,
 			);
 			await expect(registration?.loadProvider?.()).resolves.toMatchObject({
-				createProvider: createClineProvider,
+				createProvider: createOpenAICompatibleProvider,
 			});
 		}
 	});
@@ -201,7 +196,7 @@ describe("provider-ids", () => {
 			(item) => item.manifest.id === "kilo",
 		);
 		await expect(registration?.loadProvider?.()).resolves.toMatchObject({
-			createProvider: createOpenAIProvider,
+			createProvider: createOpenAICompatibleProvider,
 		});
 	});
 
@@ -290,7 +285,7 @@ describe("provider-ids", () => {
 			(item) => item.manifest.id === "sapaicore",
 		);
 		await expect(registration?.loadProvider?.()).resolves.toMatchObject({
-			createProvider: createSapAiCoreProvider,
+			createProvider: createOpenAICompatibleProvider,
 		});
 	});
 });

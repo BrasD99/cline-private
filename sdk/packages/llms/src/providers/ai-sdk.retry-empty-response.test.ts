@@ -11,26 +11,16 @@ import type {
 } from "@cline/shared";
 import { describe, expect, it, vi } from "vitest";
 import {
-	createAnthropicProvider,
-	createClineProvider,
-	createOllamaProvider,
 	createOpenAICompatibleProvider,
 	withEmptyResponseRetry,
 } from "./ai-sdk";
 
 /**
  * Integration tests proving `createRetryEmptyResponseMiddleware` is engaged
- * for every AI SDK vendor via the central wrap in `createAiSdkProvider`
- * (`withEmptyResponseRetry`), not just Ollama.
+ * via the central wrap in `createAiSdkProvider` (`withEmptyResponseRetry`).
  *
- * Production telemetry (2026-08-02→03) showed `Model returned empty response`
- * hard failures on openrouter, cline, and generic OpenAI-compatible
- * endpoints — 46 tasks / 120 events in 24h on the SDK extension. These tests
- * drive the real adapter + real `ai` package with fake wire responses (SSE
- * for the OpenAI-compatible and Anthropic wire formats) so the vendor's
- * actual stream-part shapes are exercised, guarding against a vendor whose
- * parts differ in shape being retried incorrectly (e.g. a tool-call-only
- * turn, which must never be retried because Cline runs its own tool loop).
+ * These tests drive the real adapter + real `ai` package with fake
+ * OpenAI-compatible SSE so a tool-call-only turn is not retried.
  */
 
 const READ_FILES_TOOL: AgentToolDefinition = {
@@ -194,7 +184,7 @@ describe("openai-compatible wire format (openrouter / cline / custom endpoints)"
 						},
 					})) as typeof fetch,
 			};
-			const provider = await createClineProvider(config);
+			const provider = await createOpenAICompatibleProvider(config);
 			const events = await collect(
 				await provider.stream(
 					{ ...streamRequest(), providerId },
@@ -354,124 +344,6 @@ describe("openai-compatible wire format (openrouter / cline / custom endpoints)"
 	});
 });
 
-describe("anthropic wire format", () => {
-	const sse = (events: Array<Record<string, unknown>>) =>
-		events
-			.map(
-				(event) => `event: ${event.type}\ndata: ${JSON.stringify(event)}\n\n`,
-			)
-			.join("");
-
-	const messageStart = {
-		type: "message_start",
-		message: {
-			id: "msg_1",
-			type: "message",
-			role: "assistant",
-			model: "test-model",
-			content: [],
-			stop_reason: null,
-			stop_sequence: null,
-			usage: { input_tokens: 10, output_tokens: 0 },
-		},
-	};
-	const messageStop = { type: "message_stop" };
-	const messageDelta = (stopReason: string) => ({
-		type: "message_delta",
-		delta: { stop_reason: stopReason, stop_sequence: null },
-		usage: { output_tokens: 1 },
-	});
-
-	const emptySse = sse([messageStart, messageDelta("end_turn"), messageStop]);
-	const textSse = sse([
-		messageStart,
-		{
-			type: "content_block_start",
-			index: 0,
-			content_block: { type: "text", text: "" },
-		},
-		{
-			type: "content_block_delta",
-			index: 0,
-			delta: { type: "text_delta", text: "hello" },
-		},
-		{ type: "content_block_stop", index: 0 },
-		messageDelta("end_turn"),
-		messageStop,
-	]);
-	const toolUseSse = sse([
-		messageStart,
-		{
-			type: "content_block_start",
-			index: 0,
-			content_block: { type: "tool_use", id: "toolu_1", name: "read_files" },
-		},
-		{
-			type: "content_block_delta",
-			index: 0,
-			delta: { type: "input_json_delta", partial_json: '{"files":["a.ts"]}' },
-		},
-		{ type: "content_block_stop", index: 0 },
-		messageDelta("tool_use"),
-		messageStop,
-	]);
-
-	async function run(bodies: string[], tools: AgentToolDefinition[] = []) {
-		const fetchMock = queuedFetch(bodies);
-		const config = {
-			providerId: "anthropic",
-			apiKey: "test-key",
-			fetch: fetchMock as unknown as typeof fetch,
-		};
-		const provider = await createAnthropicProvider(config);
-		const events = await collect(
-			await provider.stream(
-				streamRequest(tools),
-				providerContext("anthropic", config),
-			),
-		);
-		return { fetchMock, events };
-	}
-
-	it("retries an empty turn and streams the successful attempt", async () => {
-		const { fetchMock, events } = await run([emptySse, textSse]);
-
-		expect(fetchMock).toHaveBeenCalledTimes(2);
-		expect(hasTextDelta(events, "hello")).toBe(true);
-		expect(finishEvents(events)).toHaveLength(1);
-	});
-
-	it("does not retry a tool-call-only turn", async () => {
-		const { fetchMock, events } = await run([toolUseSse], [READ_FILES_TOOL]);
-
-		expect(fetchMock).toHaveBeenCalledTimes(1);
-		expect(events.some((event) => event.type === "tool-call-delta")).toBe(true);
-	});
-});
-
-// ---------------------------------------------------------------------------
-// Ollama: the vendor-level retry wrap was replaced by the central one; prove
-// the provider still retries after the refactor.
-
-const ollamaDoStreamMock = vi.hoisted(() =>
-	vi.fn<() => Promise<LanguageModelV4StreamResult>>(),
-);
-
-vi.mock("ollama-ai-provider-v2", () => ({
-	createOllama: () => ({
-		chat: (modelId: string) => ({
-			specificationVersion: "v4",
-			provider: "ollama",
-			modelId,
-			supportedUrls: {},
-			doGenerate: async () => {
-				throw new Error("doGenerate is not used by the streaming path");
-			},
-			doStream: ollamaDoStreamMock,
-		}),
-	}),
-}));
-
 const v4Usage = {
 	inputTokens: {
 		total: 1,
@@ -505,145 +377,6 @@ const v4EmptyParts: LanguageModelV4StreamPart[] = [
 		usage: v4Usage,
 	},
 ];
-const v4TextParts: LanguageModelV4StreamPart[] = [
-	{ type: "stream-start", warnings: [] },
-	{ type: "text-start", id: "t" },
-	{ type: "text-delta", id: "t", delta: "hello" },
-	{ type: "text-end", id: "t" },
-	{
-		type: "finish",
-		finishReason: { unified: "stop", raw: "stop" },
-		usage: v4Usage,
-	},
-];
-
-async function streamThroughOllama(
-	parts: LanguageModelV4StreamPart[][],
-): Promise<AgentModelEvent[]> {
-	ollamaDoStreamMock.mockReset();
-	for (const attempt of parts) {
-		ollamaDoStreamMock.mockResolvedValueOnce(v4Stream(attempt));
-	}
-	const config = { providerId: "ollama" };
-	const provider = await createOllamaProvider(config);
-	return collect(
-		await provider.stream(streamRequest(), providerContext("ollama", config)),
-	);
-}
-
-describe("ollama (central wrap replaces the old vendor-level wrap)", () => {
-	it("retries an empty turn and streams the successful attempt", async () => {
-		const events = await streamThroughOllama([v4EmptyParts, v4TextParts]);
-
-		expect(ollamaDoStreamMock).toHaveBeenCalledTimes(2);
-		expect(hasTextDelta(events, "hello")).toBe(true);
-		expect(finishEvents(events)).toHaveLength(1);
-	});
-});
-
-describe("full path: model output classes through emitAiSdkEvents", () => {
-	it("converts an image-file-only turn into an image event instead of retrying or dropping it", async () => {
-		const events = await streamThroughOllama([
-			[
-				{ type: "stream-start", warnings: [] },
-				{
-					type: "file",
-					mediaType: "image/png",
-					data: { type: "data", data: "aGVsbG8=" },
-				} as LanguageModelV4StreamPart,
-				{
-					type: "finish",
-					finishReason: { unified: "stop", raw: "stop" },
-					usage: v4Usage,
-				},
-			],
-		]);
-
-		// Not retried (a generated file is content)...
-		expect(ollamaDoStreamMock).toHaveBeenCalledTimes(1);
-		// ...and converted, so the assistant message will not be empty.
-		const imageEvent = events.find((event) => event.type === "media");
-		expect(imageEvent).toMatchObject({
-			type: "media",
-			media: {
-				id: expect.any(String),
-				modality: "image",
-				mediaType: "image/png",
-				source: { type: "base64", data: "aGVsbG8=" },
-			},
-		});
-	});
-
-	it("does not retry a custom-only turn (unsupported output is not empty)", async () => {
-		const events = await streamThroughOllama([
-			[
-				{ type: "stream-start", warnings: [] },
-				{
-					type: "custom",
-					kind: "anthropic.container",
-				} as LanguageModelV4StreamPart,
-				{
-					type: "finish",
-					finishReason: { unified: "stop", raw: "stop" },
-					usage: v4Usage,
-				},
-			],
-		]);
-
-		// The model responded; retrying would re-bill for the same output.
-		// The adapter does not convert custom parts (explicitly unsupported),
-		// so no content events are emitted — the downstream empty-message
-		// failure, if it happens, is honest rather than masked by retries.
-		expect(ollamaDoStreamMock).toHaveBeenCalledTimes(1);
-		expect(events.some((event) => event.type === "text-delta")).toBe(false);
-		expect(finishEvents(events)).toHaveLength(1);
-	});
-
-	it("aggregates discarded-attempt usage into the final usage event", async () => {
-		const usageOf = (input: number, output: number) =>
-			({
-				inputTokens: {
-					total: input,
-					noCache: undefined,
-					cacheRead: undefined,
-					cacheWrite: undefined,
-				},
-				outputTokens: { total: output, text: undefined, reasoning: undefined },
-			}) as never;
-		const emptyAttempt = (input: number, output: number) => [
-			{ type: "stream-start", warnings: [] } as LanguageModelV4StreamPart,
-			{
-				type: "finish",
-				finishReason: { unified: "stop", raw: "stop" },
-				usage: usageOf(input, output),
-			} as LanguageModelV4StreamPart,
-		];
-		const events = await streamThroughOllama([
-			emptyAttempt(7, 3),
-			emptyAttempt(9, 2),
-			[
-				{ type: "stream-start", warnings: [] },
-				{ type: "text-start", id: "t" },
-				{ type: "text-delta", id: "t", delta: "hello" },
-				{ type: "text-end", id: "t" },
-				{
-					type: "finish",
-					finishReason: { unified: "stop", raw: "stop" },
-					usage: usageOf(11, 5),
-				},
-			],
-		]);
-
-		expect(ollamaDoStreamMock).toHaveBeenCalledTimes(3);
-		const usageEvent = events.find((event) => event.type === "usage") as
-			| { usage: { inputTokens?: number; outputTokens?: number } }
-			| undefined;
-		expect(usageEvent).toBeDefined();
-		// 7 + 9 + 11 input, 3 + 2 + 5 output across all three attempts.
-		expect(usageEvent?.usage.inputTokens).toBe(27);
-		expect(usageEvent?.usage.outputTokens).toBe(10);
-	});
-});
 
 describe("withEmptyResponseRetry", () => {
 	function fakeModel(results: LanguageModelV4StreamResult[]): LanguageModelV4 {

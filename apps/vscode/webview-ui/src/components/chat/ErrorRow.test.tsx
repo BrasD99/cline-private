@@ -38,9 +38,6 @@ vi.mock("@/context/ExtensionStateContext", () => ({
 }))
 
 vi.mock("@/services/grpc-client", () => ({
-	AccountServiceClient: {
-		setUserOrganization: mockSetUserOrganization,
-	},
 	ModelsServiceClient: {
 		updateApiConfigurationProto: mockUpdateApiConfigurationProto,
 		commitModelSelection: vi.fn().mockResolvedValue({}),

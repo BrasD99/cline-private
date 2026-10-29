@@ -1,8 +1,4 @@
 import { describe, expect, it, vi } from "vitest";
-import {
-	getGeneratedModelsForProvider,
-	getGeneratedProviderModels,
-} from "./catalog.generated-access";
 import { normalizeClineRecommendedProviderModels } from "./catalog-cline-recommended";
 import {
 	fetchLiveProviderModels,
@@ -14,55 +10,22 @@ import {
 } from "./catalog-live";
 
 describe("models-dev-catalog", () => {
-	it("preserves model adapters and narrowly fills missing Go Qwen declarations", () => {
+	it("does not classify models from vendor npm package names", () => {
 		const models = {
 			muse: { tool_call: true, provider: { npm: "@ai-sdk/openai" } },
 			minimax: { tool_call: true, provider: { npm: "@ai-sdk/anthropic" } },
 			google: { tool_call: true, provider: { npm: "@ai-sdk/google" } },
 			qwen: { tool_call: true, family: "qwen3.7-plus" },
-			explicitQwen: {
-				tool_call: true,
-				family: "qwen",
-				provider: { npm: "@ai-sdk/openai-compatible" },
-			},
-			unknownQwen: {
-				tool_call: true,
-				family: "qwen",
-				provider: { npm: "unknown-sdk" },
-			},
-			glm: { tool_call: true, family: "glm" },
 		};
 		const result = normalizeModelsDevProviderModels({
-			"opencode-go": { npm: "@ai-sdk/openai-compatible", models },
+			opencode: { npm: "@ai-sdk/openai-compatible", models },
 			"other-gateway": { npm: "@ai-sdk/openai-compatible", models },
 		});
-		expect(result["opencode-go"].muse.metadata?.apiProtocol).toBe(
-			"openai-responses",
-		);
-		expect(result["opencode-go"].minimax.metadata?.apiProtocol).toBe(
-			"anthropic",
-		);
-		expect(result["opencode-go"].google.metadata?.apiProtocol).toBe("gemini");
-		expect(result["opencode-go"].qwen.metadata?.apiProtocol).toBe("anthropic");
-		expect(result["opencode-go"].explicitQwen.metadata?.apiProtocol).toBe(
-			"openai-chat",
-		);
-		expect(result["opencode-go"].unknownQwen.metadata).toBeUndefined();
-		expect(result["opencode-go"].glm.metadata).toBeUndefined();
-		expect(result["other-gateway"].qwen.metadata).toBeUndefined();
-	});
-
-	it("bundles zero prices for every Cline Pass model without a live refresh", () => {
-		const models = Object.values(getGeneratedModelsForProvider("cline-pass"));
-		expect(models.length).toBeGreaterThan(0);
-		for (const model of models) {
-			expect(model.pricing, model.id).toEqual({
-				input: 0,
-				output: 0,
-				cacheRead: 0,
-				cacheWrite: 0,
-			});
-		}
+		expect(result.opencode.muse.metadata?.apiProtocol).toBeUndefined();
+		expect(result.opencode.minimax.metadata?.apiProtocol).toBeUndefined();
+		expect(result.opencode.google.metadata?.apiProtocol).toBeUndefined();
+		expect(result.opencode.qwen.metadata?.apiProtocol).toBeUndefined();
+		expect(result["other-gateway"]).toBeUndefined();
 	});
 
 	it("normalizes current built-ins and providers using supported AI SDK packages", () => {
@@ -145,7 +108,7 @@ describe("models-dev-catalog", () => {
 		expect(providerSpecs["openai-native"]).toMatchObject({
 			id: "openai-native",
 			name: "OpenAI",
-			family: "openai",
+			family: "openai-compatible",
 			modelsProviderId: "openai-native",
 			defaultModelId: "gpt-test",
 			apiKeyEnv: ["OPENAI_API_KEY"],
@@ -163,18 +126,8 @@ describe("models-dev-catalog", () => {
 			defaultModelId: "poolside/laguna-m.1",
 			defaults: { baseUrl: "https://inference.poolside.ai/v1" },
 		});
-		expect(providerSpecs["extra-router"]).toMatchObject({
-			id: "extra-router",
-			family: "openai-compatible",
-			modelsProviderId: "extra-router",
-			defaultModelId: "extra-model",
-		});
-		expect(providerSpecs["extra-anthropic"]).toMatchObject({
-			id: "extra-anthropic",
-			family: "anthropic",
-			modelsProviderId: "extra-anthropic",
-			defaultModelId: "claude-extra",
-		});
+		expect(providerSpecs["extra-router"]).toBeUndefined();
+		expect(providerSpecs["extra-anthropic"]).toBeUndefined();
 		expect(providerSpecs.cohere).toBeUndefined();
 		expect(providerModels.cohere).toBeUndefined();
 		expect(
@@ -324,25 +277,15 @@ describe("models-dev-catalog", () => {
 			},
 		});
 
-		expect(providerModels["extra-router"]).not.toHaveProperty(
-			"compatible-image",
-		);
-		expect(providerModels["extra-router"]).not.toHaveProperty("mixed-model");
-		expect(providerModels["extra-router"]).toHaveProperty("chat-model");
+		expect(providerModels["extra-router"]).toBeUndefined();
+		expect(providerModels["extra-anthropic"]).toBeUndefined();
+		expect(providerModels["extra-mistral"]).toBeUndefined();
+		expect(providerModels.poe).toBeUndefined();
 		expect(providerModels.xai?.["supported-image"]?.modalities).toEqual({
 			input: ["text", "image"],
 			output: ["image"],
 		});
-		expect(providerModels["extra-anthropic"]).not.toHaveProperty(
-			"unsupported-image",
-		);
-		expect(providerModels["extra-anthropic"]).not.toHaveProperty("mixed-model");
-		expect(providerModels["extra-mistral"]).not.toHaveProperty(
-			"unsupported-image",
-		);
 		expect(providerModels.gemini).toHaveProperty("supported-image");
-		expect(providerModels.poe).toHaveProperty("chat-model");
-		expect(providerModels.poe).not.toHaveProperty("unsupported-image");
 	});
 
 	it("prefers a text-output model over a newer dedicated image default", () => {
@@ -491,8 +434,7 @@ describe("models-dev-catalog", () => {
 		});
 
 		expect(providerModels.groq).toHaveProperty("whisper-large-v3");
-		expect(providerModels.greenpt).toHaveProperty("chat-model");
-		expect(providerModels.greenpt).not.toHaveProperty("green-s");
+		expect(providerModels.greenpt).toBeUndefined();
 	});
 
 	it("normalizes Cline recommended clinePass models as a generated provider source", () => {
@@ -1101,84 +1043,6 @@ describe("models-dev-catalog", () => {
 		);
 	});
 
-	it("regenerates Codex catalog entries with input request limits", () => {
-		expect(
-			getGeneratedModelsForProvider("openai-native")["gpt-5.3-codex"]
-				?.maxInputTokens,
-		).toBe(272_000);
-		expect(
-			getGeneratedModelsForProvider("openai-native")["gpt-5.3-codex"]
-				?.contextWindow,
-		).toBe(400_000);
-		expect(
-			getGeneratedProviderModels()["vercel-ai-gateway"]?.[
-				"openai/gpt-5.3-codex"
-			]?.maxInputTokens,
-		).toBe(272_000);
-		expect(
-			getGeneratedProviderModels()["vercel-ai-gateway"]?.[
-				"openai/gpt-5.3-codex"
-			]?.contextWindow,
-		).toBe(400_000);
-	});
-
-	it("regenerates image models with supported endpoint routing", () => {
-		expect(
-			getGeneratedModelsForProvider("openai-native")["gpt-image-1.5"]
-				?.modalities?.output,
-		).toEqual(["image"]);
-		expect(
-			getGeneratedModelsForProvider("xai")["grok-imagine-image"]?.modalities,
-		).toEqual({ input: ["text", "image"], output: ["image"] });
-
-		const poeDedicatedImages = Object.values(
-			getGeneratedModelsForProvider("poe"),
-		).filter(
-			(model) =>
-				model.modalities?.output.includes("image") === true &&
-				model.modalities.output.includes("text") !== true,
-		);
-		expect(poeDedicatedImages).toEqual([]);
-	});
-
-	it("includes video input for direct MiniMax M3 catalog entries", () => {
-		for (const providerId of [
-			"minimax",
-			"minimax-cn",
-			"minimax-coding-plan",
-			"minimax-cn-coding-plan",
-		]) {
-			expect(
-				getGeneratedModelsForProvider(providerId)["MiniMax-M3"]?.capabilities,
-			).toEqual(expect.arrayContaining(["images", "video"]));
-		}
-	});
-
-	it("regenerates transcription models through explicit operation routes", () => {
-		expect(
-			getGeneratedModelsForProvider("groq")["whisper-large-v3"],
-		).toMatchObject({
-			operation: "transcription",
-			operationModes: ["batch"],
-			modalities: { input: ["audio"], output: ["text"] },
-		});
-		expect(
-			getGeneratedModelsForProvider("vercel-ai-gateway")[
-				"openai/gpt-realtime-whisper"
-			],
-		).toMatchObject({
-			operation: "transcription",
-			operationModes: ["streaming"],
-		});
-		expect(
-			getGeneratedModelsForProvider("groq")["canopylabs/orpheus-v1-english"],
-		).toBeUndefined();
-		expect(getGeneratedModelsForProvider("greenpt")["green-s"]).toBeUndefined();
-		expect(
-			getGeneratedModelsForProvider("alibaba")["qwen3-asr-flash"],
-		).toBeUndefined();
-	});
-
 	it("fetches and normalizes models.dev payload", async () => {
 		const fetcher = vi.fn(async () => ({
 			ok: true,
@@ -1242,21 +1106,12 @@ describe("models-dev-catalog", () => {
 		);
 
 		expect(fetcher).toHaveBeenCalledWith("https://models.dev/api.json");
-		expect(fetcher).toHaveBeenCalledWith(
-			"https://api.cline.bot/api/v1/ai/cline/recommended-models",
-			expect.objectContaining({
-				headers: expect.objectContaining({ "X-CLIENT-TYPE": "cline-sdk" }),
-			}),
+		expect(fetcher).not.toHaveBeenCalledWith(
+			expect.stringContaining("cline.bot"),
+			expect.anything(),
 		);
 		expect(result.openrouter).toHaveProperty("vendor/live-base-model");
-		expect(result["cline-pass"]?.["cline-pass/live-base-model"]).toMatchObject({
-			id: "cline-pass/live-base-model",
-			name: "Live Base Model",
-			contextWindow: 256_000,
-			maxInputTokens: 200_000,
-			maxTokens: 32_000,
-			pricing: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 },
-		});
+		expect(result["cline-pass"]).toBeUndefined();
 	});
 
 	it("keeps models.dev live models when Cline recommended models fail", async () => {
@@ -1312,16 +1167,7 @@ describe("models-dev-catalog", () => {
 		);
 
 		expect(result["openai-native"]).toBeUndefined();
-		expect(
-			result["cline-pass"]?.["cline-pass/live-default-model"],
-		).toMatchObject({
-			id: "cline-pass/live-default-model",
-			name: "Live Default Model",
-			contextWindow: 128_000,
-			maxInputTokens: 128_000,
-			maxTokens: 8_192,
-			pricing: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 },
-		});
+		expect(result["cline-pass"]).toBeUndefined();
 	});
 
 	it("throws when models.dev request fails", async () => {

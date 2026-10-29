@@ -2244,14 +2244,6 @@ export class Controller {
 		return TaskHistoryArray.create({ tasks: tasks.slice(0, limit), hasMore })
 	}
 
-	resolveCloudSessionStatuses(_sessionIds: Iterable<string>) {
-		return []
-	}
-
-	refreshClinePassSubscription(): Promise<void> {
-		return Promise.resolve()
-	}
-
 	invalidateTaskHistoryCache(): void {
 		this.taskHistory.invalidateCache()
 	}

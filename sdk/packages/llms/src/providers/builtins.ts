@@ -1,45 +1,21 @@
 import {
-	CLINE_DEFAULT_MODEL_ID,
 	type GatewayModelDefinition,
 	type GatewayModelOperationCapability,
-	type GatewayModelToolCapability,
 	type GatewayProviderManifest,
 	type GatewayProviderMetadata,
 	type GatewayProviderSettings,
-	getClineEnvironmentConfig,
 	type JsonValue,
 	type ProviderCapability,
 	type ProviderConfigField,
 } from "@cline/shared";
 import { getGeneratedModelsForProvider } from "../catalog/catalog.generated-access";
-import { GENERATED_CLINE_RECOMMENDED_MODELS } from "../catalog/cline-recommended.generated";
-import { filterImageOutputModels } from "../catalog/model-filters";
-import {
-	isCanonicalModelIdForAliasRules,
-	preferCanonicalModelIds,
-	VERCEL_OPENROUTER_MODEL_ID_ALIAS_RULES,
-} from "../catalog/model-id-aliases";
 import type {
 	ModelCollection,
 	ModelInfo,
 	ProviderClient,
 	ProviderProtocol,
 } from "../catalog/types";
-import type {
-	BuiltinSpec,
-	ProviderApiLine,
-	ProviderFamily,
-} from "./builtin-types";
-import {
-	ClineFreeModelLimitError,
-	ClineNotSubscribedError,
-	ClineOrgIndividualInferenceSubscriptionError,
-	ClinePassLimitError,
-	extractClinePassLimitMessage,
-	isClineFreeModelLimitMessage,
-	isClineNotSubscribedMessage,
-	isClineOrgIndividualInferenceSubscriptionMessage,
-} from "./errors";
+import type { BuiltinSpec, ProviderApiLine } from "./builtin-types";
 import { BUILT_IN_PROVIDER, normalizeProviderId } from "./ids";
 import { toGatewayModelCapabilities } from "./model-capabilities";
 import {
@@ -49,39 +25,6 @@ import {
 import { filterOpenAICodexModels } from "./openai-codex-models";
 import { resolveProviderModelCatalogKeys } from "./provider-keys";
 import { GENERATED_PROVIDER_SPECS } from "./providers.generated";
-import { ANTHROPIC_AND_QWEN_CACHE_ROUTING_METADATA } from "./routing/anthropic-compatible";
-
-export const DEFAULT_INTERNAL_OCA_BASE_URL = "";
-export const DEFAULT_EXTERNAL_OCA_BASE_URL = "";
-const CLINE_PASS_PROVIDER_ID = "cline-pass";
-const OPENAI_CODEX_DEFAULT_MODEL_ID = "gpt-5.6-terra";
-const NATIVE_WEB_SEARCH_MODEL_TOOL_CAPABILITIES: readonly GatewayModelToolCapability[] =
-	[{ name: "web_search" }];
-const OPENAI_NATIVE_MODEL_TOOL_CAPABILITIES: readonly GatewayModelToolCapability[] =
-	[
-		...NATIVE_WEB_SEARCH_MODEL_TOOL_CAPABILITIES,
-		{
-			name: "image_generation",
-			// The Responses API image tool augments language models; dedicated
-			// image models use the separate image-generation operation instead.
-			routes: [{ matcher: "model-operation", operation: "language" }],
-		},
-	];
-const VERTEX_MODEL_TOOL_CAPABILITIES: readonly GatewayModelToolCapability[] = [
-	{
-		name: "web_search",
-		// Vertex Claude is created through the Anthropic adapter, which does not
-		// expose Google Search. Exclusions also cover unregistered Claude model ids.
-		excludeRoutes: [{ matcher: "anthropic-compatible" }],
-	},
-];
-const OPENROUTER_STICKY_SESSION_METADATA: GatewayProviderMetadata = {
-	stickySession: {
-		transport: "json-body",
-		field: "session_id",
-		metadataKey: "sessionId",
-	},
-};
 
 /**
  * Context window requested from Ollama when neither the resolved model nor
@@ -117,147 +60,6 @@ const BASE_URL_FIELD: ProviderConfigField = {
 	placeholder: "https://...",
 	description: "Base endpoint used for provider requests.",
 };
-
-const VERTEX_CONFIG_FIELDS: readonly ProviderConfigField[] = [
-	{
-		path: "gcp.projectId",
-		label: "Google Cloud Project ID",
-		type: "text",
-		placeholder: "my-gcp-project",
-		description: "Google Cloud project that owns the Vertex AI resources.",
-		required: true,
-	},
-	{
-		path: "gcp.region",
-		label: "Vertex Region",
-		type: "text",
-		placeholder: "us-central1",
-		description: "Vertex AI location to run models in.",
-		defaultValue: "us-central1",
-	},
-	{
-		...API_KEY_FIELD,
-		label: "API Key",
-		description:
-			"Optional Google API key for Gemini models. Vertex Anthropic models use Google Cloud credentials.",
-	},
-];
-
-const BEDROCK_CONFIG_FIELDS: readonly ProviderConfigField[] = [
-	{
-		path: "aws.authentication",
-		label: "Authentication",
-		type: "select",
-		description: "Credential source for Amazon Bedrock requests.",
-		options: [
-			{ label: "AWS SDK / IAM", value: "iam" },
-			{ label: "AWS Profile", value: "profile" },
-			{ label: "API Key", value: "api-key" },
-		],
-		defaultValue: "iam",
-	},
-	{
-		path: "aws.region",
-		label: "AWS Region",
-		type: "text",
-		placeholder: "us-east-1",
-		description: "AWS region for Bedrock runtime requests.",
-	},
-	{
-		path: "aws.profile",
-		label: "AWS Profile",
-		type: "text",
-		placeholder: "default",
-		description: "Named AWS profile when using profile authentication.",
-	},
-	{
-		path: "aws.accessKey",
-		label: "Access Key ID",
-		type: "password",
-		placeholder: "AKIA...",
-		secret: true,
-	},
-	{
-		path: "aws.secretKey",
-		label: "Secret Access Key",
-		type: "password",
-		secret: true,
-	},
-	{
-		path: "aws.sessionToken",
-		label: "Session Token",
-		type: "password",
-		secret: true,
-	},
-	{
-		path: "apiKey",
-		label: "Bedrock API Key",
-		type: "password",
-		description: "Optional Bedrock bearer token for API key authentication.",
-		secret: true,
-	},
-	{
-		path: "aws.endpoint",
-		label: "Endpoint URL",
-		type: "url",
-		placeholder: "",
-		description: "Optional custom Bedrock runtime endpoint.",
-	},
-	{
-		path: "aws.useCrossRegionInference",
-		label: "Cross-Region Inference",
-		type: "boolean",
-	},
-	{
-		path: "aws.useGlobalInference",
-		label: "Global Inference",
-		type: "boolean",
-	},
-	{
-		path: "aws.usePromptCache",
-		label: "Prompt Cache",
-		type: "boolean",
-	},
-];
-
-const OCA_CONFIG_FIELDS: readonly ProviderConfigField[] = [
-	{
-		path: "oca.mode",
-		label: "OCA Mode",
-		type: "select",
-		options: [
-			{ label: "External", value: "external" },
-			{ label: "Internal", value: "internal" },
-		],
-		defaultValue: "external",
-	},
-	API_KEY_FIELD,
-	{
-		path: "oca.usePromptCache",
-		label: "Prompt Cache",
-		type: "boolean",
-	},
-];
-
-const QWEN_API_LINE_BASE_URLS: Readonly<Record<ProviderApiLine, string>> = {
-	china: "",
-	international: "",
-};
-
-const QWEN_CONFIG_FIELDS: readonly ProviderConfigField[] = [
-	API_KEY_FIELD,
-	BASE_URL_FIELD,
-	{
-		path: "apiLine",
-		label: "API Line",
-		type: "select",
-		description: "Regional API line for Qwen routing.",
-		options: [
-			{ label: "International", value: "international" },
-			{ label: "China", value: "china" },
-		],
-	},
-];
 
 function defaultConfigFieldsForSpec(
 	spec: BuiltinSpec,
@@ -389,60 +191,6 @@ function generatedModels(providerId: string): Record<string, ModelInfo> {
 	return cloneModels(getGeneratedModelsForProvider(providerId));
 }
 
-function firstGeneratedModelId(providerId: string): string {
-	// The generated list is release-date ordered and mixes tiers (cline-pass/*,
-	// cline-free/*, :free). Only a subscribed-tier model is a safe default;
-	// fall back to the first entry only when the catalog has none.
-	const generatedModelList = Object.keys(
-		getGeneratedModelsForProvider(providerId),
-	);
-	return (
-		generatedModelList.find((id) => id.startsWith(`${providerId}/`)) ??
-		generatedModelList[0] ??
-		""
-	);
-}
-
-function pickAnthropicModel(match: (id: string) => boolean): ModelInfo {
-	const entry = Object.entries(generatedModels("anthropic")).find(([id]) =>
-		match(id),
-	);
-	if (entry) {
-		return entry[1];
-	}
-	return {
-		id: "sonnet",
-		name: "Claude Sonnet",
-		capabilities: ["streaming", "reasoning"],
-	};
-}
-
-function buildClaudeCodeModels(): Record<string, ModelInfo> {
-	function toClaudeCodeModel(id: "opus" | "sonnet" | "haiku"): ModelInfo {
-		const source =
-			id === "opus"
-				? pickAnthropicModel((modelId) => modelId.includes("opus"))
-				: id === "haiku"
-					? pickAnthropicModel((modelId) => modelId.includes("haiku"))
-					: pickAnthropicModel((modelId) => modelId.includes("sonnet"));
-		return {
-			...source,
-			id,
-			name: `Claude ${id.charAt(0).toUpperCase()}${id.slice(1)}`,
-		};
-	}
-
-	return {
-		opus: toClaudeCodeModel("opus"),
-		sonnet: toClaudeCodeModel("sonnet"),
-		haiku: toClaudeCodeModel("haiku"),
-	};
-}
-
-function buildOpenAICodexModels(): Record<string, ModelInfo> {
-	return filterOpenAICodexModels(generatedModels("openai-native"));
-}
-
 /**
  * Generated catalog models a runtime provider reads from, with that provider's
  * catalog rules applied. Most runtime providers read their mapped catalog(s)
@@ -461,83 +209,6 @@ export function getGeneratedModelsForRuntimeProvider(
 	return providerId === BUILT_IN_PROVIDER.OPENAI_CODEX
 		? filterOpenAICodexModels(models)
 		: models;
-}
-
-// Vercel-only model ids surfaced for the Cline provider while the OpenRouter
-// catalog lacks them (Cline's backend routes these to Vercel AI Gateway).
-// Remove an id once the OpenRouter catalog lists it.
-const VERCEL_ONLY_CLINE_MODEL_IDS: readonly string[] = [
-	"meta/muse-spark-1.2-contributor",
-];
-
-function buildElevenLabsModels(): Record<string, ModelInfo> {
-	return {
-		scribe_v2: {
-			id: "scribe_v2",
-			name: "Scribe v2",
-			description:
-				"ElevenLabs speech recognition model for accurate multilingual transcription",
-			family: "elevenlabs",
-			operation: "transcription",
-			operationModes: ["batch"],
-			modalities: {
-				input: ["audio"],
-				output: ["text"],
-			},
-		},
-	};
-}
-
-function buildClineModels(): Record<string, ModelInfo> {
-	// Cline is OpenRouter-backed generally, but its recommended-model endpoint
-	// can return Vercel-style ids. Include those exact ids so runtime metadata
-	// resolves without adding duplicate OpenRouter aliases to the picker.
-	const vercelAliasModels = Object.fromEntries(
-		Object.entries(generatedModels("vercel-ai-gateway")).filter(
-			([modelId]) =>
-				isCanonicalModelIdForAliasRules(
-					modelId,
-					VERCEL_OPENROUTER_MODEL_ID_ALIAS_RULES,
-				) || VERCEL_ONLY_CLINE_MODEL_IDS.includes(modelId),
-		),
-	);
-	const models = preferCanonicalModelIds(
-		{
-			...generatedModels("openrouter"),
-			...vercelAliasModels,
-		},
-		VERCEL_OPENROUTER_MODEL_ID_ALIAS_RULES,
-	);
-
-	// Cline's inference backend currently rejects image-output models. Keep
-	// those models in their native OpenRouter and Vercel catalogs. This filter
-	// is also applied to the merged runtime catalog in mergeKnownModels; remove
-	// both call sites together when the backend gains image-output support.
-	return filterImageOutputModels(models);
-}
-
-function buildVertexModels(): Record<string, ModelInfo> {
-	const vertexModels = generatedModels("vertex");
-
-	// models.dev does not carry Fable 5 under google-vertex, so overlay the
-	// record here until it does. Pricing is deliberately dropped: Vertex
-	// bills region-dependently (its US/EU multi-region rates exceed
-	// Anthropic's list price), and a copied universal price would understate
-	// the displayed and recorded cost. Omitting it degrades cost display to
-	// "unknown" instead of wrong.
-	if (vertexModels["claude-fable-5"]) {
-		// Upstream now carries the model — its record wins.
-		return vertexModels;
-	}
-	const anthropicFable = generatedModels("anthropic")["claude-fable-5"];
-	if (!anthropicFable) {
-		return vertexModels;
-	}
-	const { pricing: _droppedAnthropicPricing, ...vertexFable } = anthropicFable;
-	return {
-		...vertexModels,
-		"claude-fable-5": vertexFable,
-	};
 }
 
 function fallbackModelInfo(id: string, spec?: BuiltinSpec): ModelInfo {
@@ -642,115 +313,6 @@ function inferClient(spec: BuiltinSpec): ProviderClient {
 			return "openai-compatible";
 	}
 }
-
-function createClineLikeSpec(
-	input: Pick<BuiltinSpec, "id" | "name" | "defaultModelId"> & {
-		family?: ProviderFamily;
-	} & Partial<
-			Pick<
-				BuiltinSpec,
-				| "description"
-				| "popular"
-				| "modelsProviderId"
-				| "modelsFactory"
-				| "metadata"
-				| "defaults"
-			>
-		>,
-): BuiltinSpec {
-	return {
-		id: input.id,
-		name: input.name,
-		description: input.description ?? "Cline API endpoint",
-		family: input.family ?? "openai-compatible",
-		popular: input.popular,
-		modelToolCapabilities: NATIVE_WEB_SEARCH_MODEL_TOOL_CAPABILITIES,
-		capabilities: ["reasoning", "prompt-cache", "tools", "oauth"],
-		modelsProviderId: input.modelsProviderId,
-		modelsFactory: input.modelsFactory,
-		defaultModelId: input.defaultModelId,
-		apiKeyEnv: ["CLINE_API_KEY"],
-		defaults: {
-			get baseUrl(): string {
-				return `${getClineEnvironmentConfig().apiBaseUrl}/api/v1`;
-			},
-			...input.defaults,
-		},
-		metadata: {
-			...ANTHROPIC_AND_QWEN_CACHE_ROUTING_METADATA,
-			imageTransport: "openrouter",
-			responseEnvelope: "success-data",
-			...input.metadata,
-		},
-	};
-}
-
-async function handleClineResponseError(
-	response: Response,
-	providerId: string,
-): Promise<void> {
-	if (response.status < 400) {
-		return;
-	}
-
-	const body = await response
-		.clone()
-		.text()
-		.catch(() => "");
-
-	if (isClineOrgIndividualInferenceSubscriptionMessage(body)) {
-		throw new ClineOrgIndividualInferenceSubscriptionError(providerId);
-	}
-
-	if (isClineFreeModelLimitMessage(body)) {
-		throw new ClineFreeModelLimitError(body, providerId);
-	}
-
-	const clinePassLimitMessage = extractClinePassLimitMessage(body);
-	if (clinePassLimitMessage) {
-		throw new ClinePassLimitError(clinePassLimitMessage, providerId);
-	}
-
-	if (isClineNotSubscribedMessage(body)) {
-		throw new ClineNotSubscribedError(providerId);
-	}
-}
-
-const cline = createClineLikeSpec({
-	id: "cline",
-	family: "cline",
-	name: "Cline Usage-Billing",
-	popular: 1,
-	modelsFactory: buildClineModels,
-	defaultModelId:
-		GENERATED_CLINE_RECOMMENDED_MODELS.recommended?.[0]?.id ??
-		CLINE_DEFAULT_MODEL_ID,
-	defaults: {
-		options: {
-			onResponseError: async (response: Response) => {
-				await handleClineResponseError(response, "cline");
-			},
-		},
-	},
-});
-
-const clinePass = createClineLikeSpec({
-	id: CLINE_PASS_PROVIDER_ID,
-	family: "cline",
-	name: "ClinePass",
-	popular: 2,
-	description: "Cline API endpoint with ClinePass models",
-	modelsProviderId: CLINE_PASS_PROVIDER_ID,
-	defaultModelId: firstGeneratedModelId(CLINE_PASS_PROVIDER_ID),
-	metadata: { usageCostDisplay: "subscription" },
-	defaults: {
-		options: {
-			onResponseError: async (response: Response) => {
-				await handleClineResponseError(response, CLINE_PASS_PROVIDER_ID);
-			},
-		},
-	},
-});
 
 /**
  * Handwritten providers plus generated providers that require Cline-specific
@@ -935,22 +497,3 @@ export const BUILTIN_PROVIDER_COLLECTIONS_BY_ID: Record<
 		collection,
 	]),
 );
-
-/** Referenced so unused provider helpers stay typecheck-clean. Not imported. */
-export const PRIVATE_FORK_UNUSED_PROVIDER_HELPERS = [
-	OPENAI_CODEX_DEFAULT_MODEL_ID,
-	OPENAI_NATIVE_MODEL_TOOL_CAPABILITIES,
-	VERTEX_MODEL_TOOL_CAPABILITIES,
-	OPENROUTER_STICKY_SESSION_METADATA,
-	VERTEX_CONFIG_FIELDS,
-	BEDROCK_CONFIG_FIELDS,
-	OCA_CONFIG_FIELDS,
-	QWEN_API_LINE_BASE_URLS,
-	QWEN_CONFIG_FIELDS,
-	buildClaudeCodeModels,
-	buildOpenAICodexModels,
-	buildElevenLabsModels,
-	buildVertexModels,
-	cline,
-	clinePass,
-];

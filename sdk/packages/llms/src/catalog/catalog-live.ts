@@ -5,7 +5,6 @@ import {
 } from "../providers/model-operations";
 import {
 	MODELS_DEV_BLOCKED_PROVIDER_IDS,
-	MODELS_DEV_CURRENT_BUILTIN_PROVIDER_KEYS,
 	resolveGeneratedProviderIdForModelsDevKey,
 } from "../providers/provider-keys";
 import {
@@ -90,16 +89,6 @@ interface SelectedModelsDevProvider {
 const DEFAULT_MAX_INPUT_TOKENS = 128_000;
 const DEFAULT_MAX_TOKENS = 4096;
 
-const MODELS_DEV_AI_SDK_PROVIDER_FAMILIES = {
-	"@ai-sdk/openai": "openai",
-	"@ai-sdk/openai-compatible": "openai-compatible",
-	"@ai-sdk/anthropic": "anthropic",
-	"@ai-sdk/google": "google",
-	"@ai-sdk/google-vertex": "vertex",
-	"@ai-sdk/amazon-bedrock": "bedrock",
-	"@ai-sdk/mistral": "mistral",
-} as const satisfies Record<string, ModelsDevGeneratedProviderSpec["family"]>;
-
 function parseReleaseDate(value: string | undefined): number {
 	if (!value) {
 		return Number.NEGATIVE_INFINITY;
@@ -124,36 +113,10 @@ export function sortModelsByReleaseDate(
 	);
 }
 
-function supportedAiSdkProviderFamily(
-	provider: ModelsDevProviderPayload,
-): ModelsDevGeneratedProviderSpec["family"] | undefined {
-	if (!provider.npm) {
-		return undefined;
-	}
-	return MODELS_DEV_AI_SDK_PROVIDER_FAMILIES[
-		provider.npm as keyof typeof MODELS_DEV_AI_SDK_PROVIDER_FAMILIES
-	];
-}
-
-function usesSupportedAiSdkProvider(
-	provider: ModelsDevProviderPayload,
-): boolean {
-	return supportedAiSdkProviderFamily(provider) !== undefined;
-}
-
 function selectedTargetProviderId(
 	sourceProviderKey: string,
-	source: ModelsDevProviderPayload,
 ): string | undefined {
-	const mappedProviderId =
-		resolveGeneratedProviderIdForModelsDevKey(sourceProviderKey);
-	if (mappedProviderId) {
-		return mappedProviderId;
-	}
-	if (usesSupportedAiSdkProvider(source)) {
-		return source.id || sourceProviderKey;
-	}
-	return undefined;
+	return resolveGeneratedProviderIdForModelsDevKey(sourceProviderKey);
 }
 
 function getSelectedModelsDevProviders(
@@ -165,21 +128,12 @@ function getSelectedModelsDevProviders(
 	for (const [sourceProviderKey, source] of Object.entries(payload).sort(
 		([a], [b]) => a.localeCompare(b),
 	)) {
-		const targetProviderId = selectedTargetProviderId(
-			sourceProviderKey,
-			source,
-		);
+		const targetProviderId = selectedTargetProviderId(sourceProviderKey);
 		if (
 			!targetProviderId ||
 			MODELS_DEV_BLOCKED_PROVIDER_IDS.has(targetProviderId) ||
 			usedProviderIds.has(targetProviderId)
 		) {
-			continue;
-		}
-
-		const isCurrentBuiltinProvider =
-			MODELS_DEV_CURRENT_BUILTIN_PROVIDER_KEYS.has(sourceProviderKey);
-		if (!isCurrentBuiltinProvider && !usesSupportedAiSdkProvider(source)) {
 			continue;
 		}
 
@@ -320,9 +274,6 @@ function toModelInfo(modelId: string, model: ModelsDevModel): ModelInfo {
 	const modalities = toModalities(model);
 	const operation = resolveCatalogModelOperation({ ...model, id: modelId });
 	const operationModes = resolveCatalogModelOperationModes(modelId, model);
-	const apiProtocol = model.provider?.npm
-		? MODEL_API_PROTOCOLS[model.provider.npm]
-		: undefined;
 
 	return {
 		id: modelId,
@@ -346,19 +297,8 @@ function toModelInfo(modelId: string, model: ModelsDevModel): ModelInfo {
 		...(operation !== "language" ? { operation } : {}),
 		...(operationModes ? { operationModes } : {}),
 		...(modalities !== undefined ? { modalities } : {}),
-		...(apiProtocol ? { metadata: { apiProtocol } } : {}),
 	};
 }
-
-const MODEL_API_PROTOCOLS: Record<
-	string,
-	NonNullable<ModelInfo["metadata"]>["apiProtocol"]
-> = {
-	"@ai-sdk/openai": "openai-responses",
-	"@ai-sdk/openai-compatible": "openai-chat",
-	"@ai-sdk/anthropic": "anthropic",
-	"@ai-sdk/google": "gemini",
-};
 
 function isDeprecatedModel(model: ModelsDevModel): boolean {
 	return model.status === "deprecated";
@@ -428,12 +368,6 @@ export function normalizeModelsDevProviderModels(
 	return providerModels;
 }
 
-function toProviderFamily(
-	provider: ModelsDevProviderPayload,
-): ModelsDevGeneratedProviderSpec["family"] {
-	return supportedAiSdkProviderFamily(provider) ?? "openai-compatible";
-}
-
 function normalizeBaseUrl(value: string | undefined): string | undefined {
 	const trimmed = value?.trim();
 	if (!trimmed) {
@@ -485,7 +419,7 @@ export function normalizeModelsDevProviderSpecs(
 			id: targetProviderId,
 			name: source.name || targetProviderId,
 			description: `${source.name || targetProviderId} model provider from models.dev`,
-			family: toProviderFamily(source),
+			family: "openai-compatible",
 			capabilities: toProviderCapabilities(models),
 			modelsProviderId: targetProviderId,
 			defaultModelId,

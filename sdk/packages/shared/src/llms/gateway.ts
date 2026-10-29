@@ -202,6 +202,12 @@ export interface GatewayProviderSettings {
 	baseUrl?: string;
 	headers?: Record<string, string>;
 	timeoutMs?: number;
+	/**
+	 * Extra attempts after a temporary API error, before the
+	 * request is given up. Applies to request start and to errors after the
+	 * stream has started. Undefined keeps the provider default.
+	 */
+	maxRetries?: number;
 	fetch?: typeof fetch;
 	options?: Record<string, unknown>;
 	metadata?: GatewayProviderMetadata;

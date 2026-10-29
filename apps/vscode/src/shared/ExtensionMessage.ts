@@ -92,6 +92,8 @@ export interface ExtensionState {
 	taskHistory: HistoryItem[]
 	telemetrySetting: TelemetrySetting
 	shellIntegrationTimeout: number
+	/** Extra attempts after a temporary API error. */
+	rateLimitMaxRetries: number
 	terminalReuseEnabled?: boolean
 	defaultTerminalProfile?: string
 	vscodeTerminalExecutionMode: string

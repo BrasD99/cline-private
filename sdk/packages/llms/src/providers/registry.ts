@@ -167,6 +167,7 @@ export class GatewayRegistry {
 							? { ...registration.defaults.headers }
 							: undefined,
 						timeoutMs: registration.defaults.timeoutMs,
+						maxRetries: registration.defaults.maxRetries,
 						fetch: registration.defaults.fetch,
 						options: registration.defaults.options
 							? { ...registration.defaults.options }
@@ -190,6 +191,7 @@ export class GatewayRegistry {
 			baseUrl: config.baseUrl,
 			headers: config.headers ? { ...config.headers } : undefined,
 			timeoutMs: config.timeoutMs,
+			maxRetries: config.maxRetries,
 			fetch: config.fetch,
 			options: config.options ? { ...config.options } : undefined,
 			metadata: config.metadata ? { ...config.metadata } : undefined,
@@ -317,6 +319,7 @@ export class GatewayRegistry {
 					...(config?.headers ?? {}),
 				},
 				timeoutMs: config?.timeoutMs ?? record.defaults?.timeoutMs,
+				maxRetries: config?.maxRetries ?? record.defaults?.maxRetries,
 				fetch: config?.fetch ?? record.defaults?.fetch ?? this.fallbackFetch,
 				options,
 				metadata,

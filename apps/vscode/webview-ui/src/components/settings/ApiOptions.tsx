@@ -49,8 +49,8 @@ const ApiOptions = ({ showModelOptions, apiErrorMessage, modelIdErrorMessage, is
 	// Use full context state for immediate save payload
 	const { apiConfiguration, remoteConfigSettings } = useExtensionState()
 
-	const selectedProvider =
-		(currentMode === "plan" ? apiConfiguration?.planModeApiProvider : apiConfiguration?.actModeApiProvider) || "openai"
+	const savedProvider =
+		(currentMode === "plan" ? apiConfiguration?.planModeApiProvider : apiConfiguration?.actModeApiProvider) || ""
 	const { providers: catalogProviderListings, refresh: refreshProviders } = useProviderListings()
 
 	const { handleModeFieldChange } = useApiConfigurationHandlers()
@@ -86,8 +86,11 @@ const ApiOptions = ({ showModelOptions, apiErrorMessage, modelIdErrorMessage, is
 		return providers
 	}, [catalogProviderListings, remoteConfigSettings])
 
+	const selectedProvider = providerOptions.some((option) => option.value === savedProvider) ? savedProvider : ""
+	const autoSelectedProviderRef = useRef<string | null>(null)
+
 	const currentProviderLabel = useMemo(() => {
-		return providerOptions.find((option) => option.value === selectedProvider)?.label || selectedProvider
+		return providerOptions.find((option) => option.value === selectedProvider)?.label || ""
 	}, [providerOptions, selectedProvider])
 
 	// Sync search term with current provider when not searching
@@ -125,6 +128,18 @@ const ApiOptions = ({ showModelOptions, apiErrorMessage, modelIdErrorMessage, is
 		setIsDropdownVisible(false)
 		setSelectedIndex(-1)
 	}
+
+	useEffect(() => {
+		if (providerOptions.length !== 1 || selectedProvider) {
+			return
+		}
+		const onlyProvider = providerOptions[0].value
+		if (autoSelectedProviderRef.current === onlyProvider) {
+			return
+		}
+		autoSelectedProviderRef.current = onlyProvider
+		handleProviderChange(onlyProvider)
+	}, [providerOptions, selectedProvider, handleProviderChange])
 
 	const handleKeyDown = (event: KeyboardEvent<HTMLInputElement>) => {
 		if (!isDropdownVisible) {
@@ -212,84 +227,89 @@ const ApiOptions = ({ showModelOptions, apiErrorMessage, modelIdErrorMessage, is
 				}
 				`}
 			</style>
-			<DropdownContainer className="dropdown-container">
-				{remoteConfigSettings?.remoteConfiguredProviders && remoteConfigSettings.remoteConfiguredProviders.length > 0 ? (
-					<Tooltip>
-						<TooltipTrigger>
-							<div className="flex items-center gap-2 mb-1">
-								<label htmlFor="api-provider">
-									<span style={{ fontWeight: 500 }}>API Provider</span>
-								</label>
-								<i className="codicon codicon-lock text-description text-sm" />
-							</div>
-						</TooltipTrigger>
-						<TooltipContent>Provider options are managed by your organization's remote configuration</TooltipContent>
-					</Tooltip>
-				) : (
-					<label htmlFor="api-provider">
-						<span style={{ fontWeight: 500 }}>API Provider</span>
-					</label>
-				)}
-				<ProviderDropdownWrapper ref={dropdownRef}>
-					<VSCodeTextField
-						data-testid="provider-selector-input"
-						id="api-provider"
-						onFocus={() => {
-							setIsDropdownVisible(true)
-							setSearchTerm("")
-						}}
-						onInput={(e) => {
-							setSearchTerm((e.target as HTMLInputElement)?.value || "")
-							setIsDropdownVisible(true)
-						}}
-						onKeyDown={handleKeyDown}
-						placeholder="Search and select provider..."
-						role="combobox"
-						style={{
-							width: "100%",
-							zIndex: DROPDOWN_Z_INDEX,
-							position: "relative",
-							minWidth: 130,
-						}}
-						value={searchTerm}>
-						{searchTerm && searchTerm !== currentProviderLabel && (
-							<div
-								aria-label="Clear search"
-								className="input-icon-button codicon codicon-close"
-								onClick={() => {
-									setSearchTerm("")
-									setIsDropdownVisible(true)
-								}}
-								slot="end"
-								style={{
-									display: "flex",
-									justifyContent: "center",
-									alignItems: "center",
-									height: "100%",
-								}}
-							/>
-						)}
-					</VSCodeTextField>
-					{isDropdownVisible && (
-						<ProviderDropdownList ref={dropdownListRef} role="listbox">
-							{providerSearchResults.map((item, index) => (
-								<ProviderDropdownItem
-									data-testid={`provider-option-${item.value}`}
-									isSelected={index === selectedIndex}
-									key={item.value}
-									onClick={() => handleProviderChange(item.value)}
-									onMouseEnter={() => setSelectedIndex(index)}
-									ref={(el) => {
-										itemRefs.current[index] = el
-									}}
-									role="option">
-									<span>{item.html}</span>
-								</ProviderDropdownItem>
-							))}
-						</ProviderDropdownList>
+			{providerOptions.length > 0 && (
+				<DropdownContainer className="dropdown-container">
+					{remoteConfigSettings?.remoteConfiguredProviders &&
+					remoteConfigSettings.remoteConfiguredProviders.length > 0 ? (
+						<Tooltip>
+							<TooltipTrigger>
+								<div className="flex items-center gap-2 mb-1">
+									<label htmlFor="api-provider">
+										<span style={{ fontWeight: 500 }}>API Provider</span>
+									</label>
+									<i className="codicon codicon-lock text-description text-sm" />
+								</div>
+							</TooltipTrigger>
+							<TooltipContent>
+								Provider options are managed by your organization's remote configuration
+							</TooltipContent>
+						</Tooltip>
+					) : (
+						<label htmlFor="api-provider">
+							<span style={{ fontWeight: 500 }}>API Provider</span>
+						</label>
 					)}
-				</ProviderDropdownWrapper>
-			</DropdownContainer>
+					<ProviderDropdownWrapper ref={dropdownRef}>
+						<VSCodeTextField
+							data-testid="provider-selector-input"
+							id="api-provider"
+							onFocus={() => {
+								setIsDropdownVisible(true)
+								setSearchTerm("")
+							}}
+							onInput={(e) => {
+								setSearchTerm((e.target as HTMLInputElement)?.value || "")
+								setIsDropdownVisible(true)
+							}}
+							onKeyDown={handleKeyDown}
+							placeholder="Search and select provider..."
+							role="combobox"
+							style={{
+								width: "100%",
+								zIndex: DROPDOWN_Z_INDEX,
+								position: "relative",
+								minWidth: 130,
+							}}
+							value={searchTerm}>
+							{searchTerm && searchTerm !== currentProviderLabel && (
+								<div
+									aria-label="Clear search"
+									className="input-icon-button codicon codicon-close"
+									onClick={() => {
+										setSearchTerm("")
+										setIsDropdownVisible(true)
+									}}
+									slot="end"
+									style={{
+										display: "flex",
+										justifyContent: "center",
+										alignItems: "center",
+										height: "100%",
+									}}
+								/>
+							)}
+						</VSCodeTextField>
+						{isDropdownVisible && (
+							<ProviderDropdownList ref={dropdownListRef} role="listbox">
+								{providerSearchResults.map((item, index) => (
+									<ProviderDropdownItem
+										data-testid={`provider-option-${item.value}`}
+										isSelected={index === selectedIndex}
+										key={item.value}
+										onClick={() => handleProviderChange(item.value)}
+										onMouseEnter={() => setSelectedIndex(index)}
+										ref={(el) => {
+											itemRefs.current[index] = el
+										}}
+										role="option">
+										<span>{item.html}</span>
+									</ProviderDropdownItem>
+								))}
+							</ProviderDropdownList>
+						)}
+					</ProviderDropdownWrapper>
+				</DropdownContainer>
+			)}
 
 			{!isPopup && (
 				<AddOpenAiConnectionForm
@@ -299,7 +319,7 @@ const ApiOptions = ({ showModelOptions, apiErrorMessage, modelIdErrorMessage, is
 				/>
 			)}
 
-			{apiConfiguration && (
+			{apiConfiguration && selectedProvider && (
 				<OpenAICompatibleProvider
 					currentMode={currentMode}
 					isPopup={isPopup}

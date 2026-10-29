@@ -278,6 +278,8 @@ const USER_SETTINGS_FIELDS = {
 	planActSeparateModelsSetting: { default: false as boolean, isComputed: true },
 	enableCheckpointsSetting: { default: true as boolean },
 	shellIntegrationTimeout: { default: 4000 as number },
+	// Extra attempts after a temporary API error. 0 disables them.
+	rateLimitMaxRetries: { default: 3 as number },
 	defaultTerminalProfile: { default: "default" as string },
 	hooksEnabled: { default: true as boolean },
 	useAutoCondense: { default: true as boolean },

@@ -33,6 +33,7 @@ import { ClineClient } from "@shared/cline"
 import type { HistoryItem } from "@shared/HistoryItem"
 import { DEFAULT_LANGUAGE_SETTINGS, getLanguageKey, type LanguageDisplay } from "@shared/Languages"
 import { toLegacyApiProvider } from "@shared/model-catalog/provider-helpers"
+import { normalizeRateLimitMaxRetries } from "@shared/rate-limit-retries"
 import { Logger } from "@shared/services/Logger"
 import type { Settings } from "@shared/storage/state-keys"
 import type { Mode } from "@shared/storage/types"
@@ -940,10 +941,12 @@ export async function buildSessionConfig(input: SessionConfigInput): Promise<Cor
 	let sapProviderConfig: SapProviderConfig | undefined
 	let ollamaProviderConfig: ReturnType<typeof resolveOllamaProviderConfig> | undefined
 	let azureProviderConfig: Pick<ProviderSettings, "azure"> | undefined
+	let rateLimitMaxRetries: number | undefined
 
 	try {
 		const stateManager = StateManager.get()
 		apiConfig = stateManager.getApiConfiguration()
+		rateLimitMaxRetries = stateManager.getGlobalSettingsKey("rateLimitMaxRetries")
 
 		// Resolve the provider for the current mode. State written by older
 		// builds or other hosts may carry SDK catalog spellings (e.g.
@@ -1011,9 +1014,10 @@ export async function buildSessionConfig(input: SessionConfigInput): Promise<Cor
 		try {
 			const dataDir = resolveDataDir()
 			const manager = getProviderSettingsManager(dataDir)
-			const lastUsed = manager.getLastUsedProviderSettings({
-				isClinePassEnabled: true,
-			})
+			const state = manager.read()
+			const lastUsedId = state.lastUsedProvider
+			const lastUsedEntry = lastUsedId ? state.providers[lastUsedId] : undefined
+			const lastUsed = lastUsedEntry?.tokenSource === "manual" ? lastUsedEntry.settings : undefined
 
 			if (lastUsed?.provider && lastUsed?.apiKey) {
 				// providers.json stores SDK provider ids (e.g. `openai-compatible`);
@@ -1168,6 +1172,7 @@ export async function buildSessionConfig(input: SessionConfigInput): Promise<Cor
 		// straight from providerConfig — notably the compaction summarizer, which
 		// otherwise falls back to a small default output cap (CLINE-2911).
 		...(maxTokensPerTurn !== undefined ? { maxOutputTokens: maxTokensPerTurn } : {}),
+		...(typeof rateLimitMaxRetries === "number" ? { maxRetries: normalizeRateLimitMaxRetries(rateLimitMaxRetries) } : {}),
 		fetch: resolveProviderFetch(sdkProviderId, baseUrl),
 	}
 

@@ -1,7 +1,8 @@
 import { UpdateSettingsRequest } from "@shared/proto/cline/state"
+import { MAX_RATE_LIMIT_RETRIES } from "@shared/rate-limit-retries"
 import { Mode } from "@shared/storage/types"
-import { VSCodeCheckbox } from "@vscode/webview-ui-toolkit/react"
-import { useState } from "react"
+import { VSCodeCheckbox, VSCodeTextField } from "@vscode/webview-ui-toolkit/react"
+import { useEffect, useState } from "react"
 import { useExtensionState } from "@/context/ExtensionStateContext"
 import { StateServiceClient } from "@/services/grpc-client"
 import { TabButton } from "../../mcp/configuration/McpConfigurationView"
@@ -34,8 +35,28 @@ const LocalModelSettings = ({
 	currentTab,
 	setCurrentTab,
 }: Pick<ApiConfigurationSectionProps, "initialModelTab"> & { currentTab: Mode; setCurrentTab: (tab: Mode) => void }) => {
-	const { planActSeparateModelsSetting, mode, apiConfiguration } = useExtensionState()
+	const { planActSeparateModelsSetting, mode, apiConfiguration, rateLimitMaxRetries } = useExtensionState()
 	const { handleFieldsChange } = useApiConfigurationHandlers()
+	const [retryInput, setRetryInput] = useState(String(rateLimitMaxRetries ?? 3))
+
+	useEffect(() => {
+		setRetryInput(String(rateLimitMaxRetries ?? 3))
+	}, [rateLimitMaxRetries])
+
+	const commitRetries = (raw: string) => {
+		const parsed = Number(raw)
+		if (!Number.isInteger(parsed) || parsed < 0 || parsed > MAX_RATE_LIMIT_RETRIES) {
+			setRetryInput(String(rateLimitMaxRetries ?? 3))
+			return
+		}
+		if (parsed === rateLimitMaxRetries) {
+			return
+		}
+		StateServiceClient.updateSettings(UpdateSettingsRequest.create({ rateLimitMaxRetries: parsed })).catch((error) => {
+			console.error("Failed to update retry count:", error)
+		})
+	}
+
 	return (
 		<>
 			{/* Tabs container */}
@@ -72,6 +93,22 @@ const LocalModelSettings = ({
 			) : (
 				<ApiOptions currentMode={mode} initialModelTab={initialModelTab} showModelOptions={true} />
 			)}
+
+			<div className="mb-[10px]">
+				<label htmlFor="api-retries">
+					<span style={{ fontWeight: 500 }}>Retries</span>
+				</label>
+				<VSCodeTextField
+					id="api-retries"
+					onBlur={() => commitRetries(retryInput)}
+					onInput={(event) => setRetryInput((event.target as HTMLInputElement).value)}
+					value={retryInput}
+				/>
+				<p className="text-xs mt-[5px] text-(--vscode-descriptionForeground)">
+					Extra attempts after a temporary API error. 0 turns retries off. Maximum {MAX_RATE_LIMIT_RETRIES}. Applies to
+					the next task.
+				</p>
+			</div>
 
 			<div className="mb-[5px]">
 				<VSCodeCheckbox

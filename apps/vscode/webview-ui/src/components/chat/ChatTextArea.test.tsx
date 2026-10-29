@@ -28,6 +28,15 @@ vi.mock("@/context/PlatformContext", () => ({
 	usePlatform: () => ({ togglePlanActKeys: "Meta+Shift+a" }),
 }))
 
+vi.mock("@/hooks/useProviderListings", () => ({
+	useProviderListings: () => ({
+		providers: [{ id: "anthropic", name: "Anthropic" }],
+		isLoading: false,
+		error: undefined,
+		refresh: vi.fn(),
+	}),
+}))
+
 vi.mock("@/hooks/useNormalizedApiConfiguration", () => ({
 	useNormalizedApiConfiguration: () => ({
 		selectedProvider: "anthropic",

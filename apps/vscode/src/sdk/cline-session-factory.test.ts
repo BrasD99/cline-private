@@ -28,6 +28,7 @@ const mocks = vi.hoisted(() => {
 	const providerSettingsManager = {
 		getFilePath: vi.fn(() => path.join(tempDir, "settings", "providers.json")),
 		getLastUsedProviderSettings: vi.fn(() => undefined),
+		read: vi.fn(() => ({ providers: {} })),
 		getProviderSettings: vi.fn((_providerId?: string) => undefined),
 		saveProviderSettings: vi.fn(),
 	}

@@ -9,6 +9,7 @@ import { McpDisplayMode } from "@/shared/McpDisplayMode"
 import { Logger } from "@/shared/services/Logger"
 import { telemetryService } from "../../../services/telemetry"
 import { BrowserSettings as SharedBrowserSettings } from "../../../shared/BrowserSettings"
+import { normalizeRateLimitMaxRetries } from "../../../shared/rate-limit-retries"
 import { Controller } from ".."
 import { normalizeProviderSwitchModel } from "../models/providerSwitchNormalization"
 import { createTaskApiModelShim, resolveActiveModelIdFromApiConfiguration } from "../models/taskApiModel"
@@ -112,6 +113,13 @@ export async function updateSettings(controller: Controller, request: UpdateSett
 
 		if (request.preferredLanguage !== undefined) {
 			controller.stateManager.setGlobalState("preferredLanguage", request.preferredLanguage)
+		}
+
+		if (request.rateLimitMaxRetries !== undefined) {
+			controller.stateManager.setGlobalState(
+				"rateLimitMaxRetries",
+				normalizeRateLimitMaxRetries(request.rateLimitMaxRetries),
+			)
 		}
 
 		// Update terminal timeout setting

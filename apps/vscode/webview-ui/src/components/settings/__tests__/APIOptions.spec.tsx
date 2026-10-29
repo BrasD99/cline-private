@@ -60,16 +60,23 @@ describe("ApiOptions", () => {
 		)
 
 		expect(screen.getByText("Add OpenAI connection")).toBeInTheDocument()
-		expect(screen.getByText("Custom Headers")).toBeInTheDocument()
+		expect(screen.queryByTestId("provider-selector-input")).not.toBeInTheDocument()
 	})
 
 	it("renders the saved connection's model options", () => {
+		vi.mocked(useProviderListings).mockReturnValue({
+			providers: [{ id: "openai", name: "Company" } as never],
+			isLoading: false,
+			error: undefined,
+			refresh: vi.fn(),
+		})
 		render(
 			<ExtensionStateContextProvider>
 				<ApiOptions currentMode="plan" showModelOptions={true} />
 			</ExtensionStateContextProvider>,
 		)
 
+		expect(screen.getByTestId("provider-selector-input")).toBeInTheDocument()
 		fireEvent.click(screen.getByText("Model Configuration"))
 		expect(screen.getByText("Supports Images")).toBeInTheDocument()
 		expect(screen.getByText("Context Window Size")).toBeInTheDocument()

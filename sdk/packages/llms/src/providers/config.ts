@@ -95,6 +95,11 @@ export interface EndpointConfig {
 	/** Request timeout in milliseconds */
 	timeoutMs?: number;
 	/**
+	 * Extra attempts after a temporary API error.
+	 * Undefined keeps the provider default of 3. 0 disables retries.
+	 */
+	maxRetries?: number;
+	/**
 	 * Custom `fetch` implementation used by the AI gateway providers when
 	 * issuing requests. When supplied, it is forwarded to
 	 * `GatewayProviderSettings.fetch` (and as a top-level fallback on

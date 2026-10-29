@@ -1050,6 +1050,14 @@ function getNestedUsageValue(
  */
 const MODEL_REQUEST_MAX_RETRIES = 3;
 const MODEL_STREAM_MAX_RETRIES = 3;
+const MODEL_MAX_RETRIES_CAP = 10;
+
+function configuredMaxRetries(value: number | undefined, fallback: number): number {
+	if (value === undefined || !Number.isInteger(value) || value < 0) {
+		return fallback;
+	}
+	return Math.min(value, MODEL_MAX_RETRIES_CAP);
+}
 
 type UsagePath = readonly [string] | readonly [string, string];
 
@@ -2335,7 +2343,10 @@ function createAiSdkProvider(
 							...(useSystemOption ? { system: systemPrompt } : {}),
 							...(tools ? { tools } : {}),
 							abortSignal: request.signal,
-							maxRetries: MODEL_REQUEST_MAX_RETRIES,
+							maxRetries: configuredMaxRetries(
+								context.config.maxRetries,
+								MODEL_REQUEST_MAX_RETRIES,
+							),
 							experimental_repairToolCall: repairMalformedToolCall as never,
 							telemetry: {
 								...aiSdkTelemetry,
@@ -2364,7 +2375,10 @@ function createAiSdkProvider(
 								? { stopWhen: stepCountIs(8) }
 								: {}),
 							...requestConfig,
-							streamRetries: MODEL_STREAM_MAX_RETRIES,
+							streamRetries: configuredMaxRetries(
+								context.config.maxRetries,
+								MODEL_STREAM_MAX_RETRIES,
+							),
 							...(portableReasoning ? { reasoning: portableReasoning } : {}),
 							onLanguageModelCallStart: () => {
 								capturedError.current = undefined;

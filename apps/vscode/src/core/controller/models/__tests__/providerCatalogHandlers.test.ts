@@ -6,6 +6,17 @@ import { parseProviderId } from "@/sdk/model-catalog/provider-id"
 import { ApiFormat, ModelOverrides } from "@/shared/proto/cline/models"
 import type { ProviderCatalogController } from "../providerCatalogShared"
 
+vi.mock("@/sdk/provider-migration", () => ({
+	getProviderSettingsManager: () => ({
+		read: () => ({
+			providers: {
+				deepseek: { tokenSource: "manual", settings: { provider: "deepseek" } },
+				openrouter: { tokenSource: "migration", settings: { provider: "openrouter" } },
+			},
+		}),
+	}),
+}))
+
 type TestStateManager = {
 	setGlobalStateBatch: ReturnType<typeof vi.fn>
 	flushPendingState?: ReturnType<typeof vi.fn<() => Promise<void>>>

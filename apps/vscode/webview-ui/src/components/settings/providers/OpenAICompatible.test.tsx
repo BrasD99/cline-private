@@ -23,6 +23,18 @@ vi.mock("@/hooks/useDynamicProviderSelection", () => ({
 	useDynamicProviderSelection: mocks.useDynamicProviderSelection,
 }))
 
+vi.mock("@/hooks/useProviderModels", () => ({
+	useProviderModels: () => ({
+		models: {},
+		defaultModelId: "",
+		isLoading: false,
+		isStale: false,
+		error: undefined,
+		refresh: vi.fn(),
+		fingerprint: "",
+	}),
+}))
+
 vi.mock("@/hooks/useProviderConfig", () => ({
 	fromProtobufProviderModelOverrides: (overrides: Record<string, unknown> | undefined) =>
 		overrides ? { ...overrides } : undefined,
@@ -75,6 +87,15 @@ vi.mock("@vscode/webview-ui-toolkit/react", () => ({
 		</select>
 	),
 	VSCodeOption: ({ children, value }: { children?: ReactNode; value?: string }) => <option value={value}>{children}</option>,
+	VSCodeTextField: ({
+		value,
+		placeholder,
+		onInput,
+	}: {
+		value?: string
+		placeholder?: string
+		onInput?: (event: { target: HTMLInputElement }) => void
+	}) => <input onInput={onInput} placeholder={placeholder} value={value} />,
 	VSCodeCheckbox: ({
 		checked,
 		children,

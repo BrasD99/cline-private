@@ -69,6 +69,8 @@ service ModelsService {
   rpc addOpenAiConnection(AddOpenAiConnectionRequest) returns (String);
   // Removes a user-added OpenAI-compatible connection
   rpc deleteOpenAiConnection(StringRequest) returns (Empty);
+  // Adds or renames a model on a saved OpenAI-compatible connection
+  rpc addOpenAiModel(AddOpenAiModelRequest) returns (Empty);
 }
 
 // List of VS Code LM models
@@ -862,4 +864,11 @@ message AddOpenAiConnectionRequest {
   string api_key = 3;
   string model_id = 4;
   map<string, string> headers = 5;
+  string model_name = 6;
+}
+
+message AddOpenAiModelRequest {
+  string provider_id = 1;
+  string model_id = 2;
+  string name = 3;
 }

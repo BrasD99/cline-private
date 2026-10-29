@@ -1170,9 +1170,13 @@ const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 			if (!apiConfiguration || !hasSavedConnection) {
 				return unknownModel
 			}
+			const visibleModel =
+				selectedModelInfo.name?.trim() && selectedModelInfo.name !== selectedModelId
+					? selectedModelInfo.name
+					: selectedModelId
 			switch (selectedProvider) {
 				case "cline":
-					return `${selectedProvider}:${selectedModelId}`
+					return `${selectedProvider}:${visibleModel}`
 				case "cline-pass":
 					// Free models selected on ClinePass go through Cline usage billing,
 					// so label them the same way as the cline provider
@@ -1180,7 +1184,7 @@ const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 						? `${selectedProvider}:${selectedModelId.replace(/^cline-pass\//, "")}`
 						: `cline:${selectedModelId}`
 				case "openai":
-					return `openai-compat:${selectedModelId}`
+					return `openai-compat:${visibleModel}`
 				case "vscode-lm":
 					return `vscode-lm:${vsCodeLmModelSelector ? `${vsCodeLmModelSelector.vendor ?? ""}/${vsCodeLmModelSelector.family ?? ""}` : unknownModel}`
 				case "together":
@@ -1198,9 +1202,18 @@ const ChatTextArea = forwardRef<HTMLTextAreaElement, ChatTextAreaProps>(
 				case "anthropic":
 				case "openrouter":
 				default:
-					return `${selectedProvider}:${selectedModelId}`
+					return `${selectedProvider}:${visibleModel}`
 			}
-		}, [apiConfiguration, mode, selectedProvider, selectedModelId, cloudActOnly, cloudModelId, hasSavedConnection])
+		}, [
+			apiConfiguration,
+			mode,
+			selectedProvider,
+			selectedModelId,
+			selectedModelInfo.name,
+			cloudActOnly,
+			cloudModelId,
+			hasSavedConnection,
+		])
 
 		// Function to show error message for unsupported files for drag and drop
 		const showUnsupportedFileErrorMessage = () => {

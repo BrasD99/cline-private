@@ -1,14 +1,15 @@
 import { TooltipContent, TooltipTrigger } from "@radix-ui/react-tooltip"
 import { azureOpenAiDefaultApiVersion, type OpenAiCompatibleModelInfo, openAiModelInfoSafeDefaults } from "@shared/api"
-import { OpenAiModelsRequest } from "@shared/proto/cline/models"
+import { AddOpenAiModelRequest, OpenAiModelsRequest } from "@shared/proto/cline/models"
 import { fromProtobufModelInfo } from "@shared/proto-conversions/models/typeConversion"
 import type { Mode } from "@shared/storage/types"
-import { VSCodeButton, VSCodeCheckbox, VSCodeDropdown, VSCodeOption } from "@vscode/webview-ui-toolkit/react"
-import { useCallback, useEffect, useRef, useState } from "react"
+import { VSCodeButton, VSCodeCheckbox, VSCodeDropdown, VSCodeOption, VSCodeTextField } from "@vscode/webview-ui-toolkit/react"
+import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { Tooltip } from "@/components/ui/tooltip"
 import { useExtensionState } from "@/context/ExtensionStateContext"
 import { useDynamicProviderSelection } from "@/hooks/useDynamicProviderSelection"
 import { fromProtobufProviderModelOverrides, type ProviderModelOverrides, useProviderConfig } from "@/hooks/useProviderConfig"
+import { useProviderModels } from "@/hooks/useProviderModels"
 import { ModelsServiceClient } from "@/services/grpc-client"
 import { getAsVar, VSC_DESCRIPTION_FOREGROUND } from "@/utils/vscStyles"
 import { ApiKeyField } from "../common/ApiKeyField"
@@ -46,6 +47,11 @@ export const OpenAICompatibleProvider = ({
 	const [modelConfigurationSelected, setModelConfigurationSelected] = useState(false)
 	const [isCustomOpenAiModelEntryVisible, setIsCustomOpenAiModelEntryVisible] = useState(false)
 	const [availableOpenAiModels, setAvailableOpenAiModels] = useState<string[]>([])
+	const [addedModelId, setAddedModelId] = useState("")
+	const [addedModelName, setAddedModelName] = useState("")
+	const [addModelError, setAddModelError] = useState("")
+	const [isAddingModel, setIsAddingModel] = useState(false)
+	const { models: savedModels, refresh: refreshSavedModels } = useProviderModels(providerId)
 	const [isRefreshingOpenAiModels, setIsRefreshingOpenAiModels] = useState(false)
 	const [openAiModelsError, setOpenAiModelsError] = useState<string | undefined>(undefined)
 	const [modelFieldErrors, setModelFieldErrors] = useState<Partial<Record<NumericModelOverrideKey, string>>>({})
@@ -270,6 +276,14 @@ export const OpenAICompatibleProvider = ({
 		void refreshOpenAiModels(config?.baseUrl, latestOpenAiApiKeyRef.current)
 	}, [config?.baseUrl, refreshOpenAiModels])
 
+	const modelChoices = useMemo(() => {
+		const ids = new Set<string>([...Object.keys(savedModels), ...availableOpenAiModels])
+		return [...ids].filter(Boolean).map((id) => {
+			const name = savedModels[id]?.name?.trim()
+			return { id, label: name && name !== id ? `${name} (${id})` : id }
+		})
+	}, [availableOpenAiModels, savedModels])
+
 	const handleOpenAiModelSelection = useCallback(
 		(modelId: string) => {
 			if (isOpenAiProvider) {
@@ -288,6 +302,27 @@ export const OpenAICompatibleProvider = ({
 		},
 		[commitOpenAiSelection, currentMode, handleModeFieldChange, isOpenAiProvider],
 	)
+
+	const addModel = useCallback(async () => {
+		const modelId = addedModelId.trim()
+		const name = addedModelName.trim()
+		if (!modelId || !name) {
+			return
+		}
+		setIsAddingModel(true)
+		setAddModelError("")
+		try {
+			await ModelsServiceClient.addOpenAiModel(AddOpenAiModelRequest.create({ providerId, modelId, name }))
+			setAddedModelId("")
+			setAddedModelName("")
+			await refreshSavedModels()
+			handleOpenAiModelSelection(modelId)
+		} catch (error) {
+			setAddModelError(error instanceof Error ? error.message : String(error))
+		} finally {
+			setIsAddingModel(false)
+		}
+	}, [addedModelId, addedModelName, handleOpenAiModelSelection, providerId, refreshSavedModels])
 
 	const { savedApiKeyMask, handleApiKeyChange } = useProviderApiKeyField({
 		apiKeyLength: config?.apiKeyLength,
@@ -340,7 +375,7 @@ export const OpenAICompatibleProvider = ({
 				{isRefreshingOpenAiModels && <span> Loading models…</span>}
 			</label>
 			{openAiModelsError && <div role="alert">{openAiModelsError}</div>}
-			{availableOpenAiModels.length > 0 ? (
+			{modelChoices.length > 0 ? (
 				<div
 					style={{
 						display: "flex",
@@ -357,7 +392,7 @@ export const OpenAICompatibleProvider = ({
 							// model-list/selection hydration, otherwise it ignores the
 							// value prop for dynamically rendered options.
 							// https://github.com/microsoft/vscode-webview-ui-toolkit/issues/433
-							key={`${selectedModelId ?? ""}:${isCustomOpenAiModelEntryVisible}:${availableOpenAiModels.join("\u0000")}`}
+							key={`${selectedModelId ?? ""}:${isCustomOpenAiModelEntryVisible}:${modelChoices.map((model) => model.label).join("\u0000")}`}
 							onChange={(event) => {
 								const modelId = (event.target as HTMLSelectElement).value
 								if (modelId === "__custom__") {
@@ -368,13 +403,20 @@ export const OpenAICompatibleProvider = ({
 								setIsCustomOpenAiModelEntryVisible(false)
 								handleOpenAiModelSelection(modelId)
 							}}
-							value={selectedModelId && availableOpenAiModels.includes(selectedModelId) ? selectedModelId : ""}>
-							{selectedModelId && !availableOpenAiModels.includes(selectedModelId) && (
+							value={
+								selectedModelId && modelChoices.some((model) => model.id === selectedModelId)
+									? selectedModelId
+									: ""
+							}>
+							{selectedModelId && !modelChoices.some((model) => model.id === selectedModelId) && (
 								<VSCodeOption value="">{selectedModelId} (not in current list)</VSCodeOption>
 							)}
-							{availableOpenAiModels.map((modelId) => (
-								<VSCodeOption className="break-words whitespace-normal max-w-full" key={modelId} value={modelId}>
-									{modelId}
+							{modelChoices.map((model) => (
+								<VSCodeOption
+									className="break-words whitespace-normal max-w-full"
+									key={model.id}
+									value={model.id}>
+									{model.label}
 								</VSCodeOption>
 							))}
 							<VSCodeOption value="__custom__">Use custom model ID…</VSCodeOption>
@@ -382,7 +424,7 @@ export const OpenAICompatibleProvider = ({
 					</DropdownContainer>
 
 					{(isCustomOpenAiModelEntryVisible ||
-						(selectedModelId && !availableOpenAiModels.includes(selectedModelId))) && (
+						(selectedModelId && !modelChoices.some((model) => model.id === selectedModelId))) && (
 						<DebouncedTextField
 							initialValue={selectedModelId || ""}
 							onChange={(value) => handleOpenAiModelSelection(value)}
@@ -400,6 +442,26 @@ export const OpenAICompatibleProvider = ({
 					style={{ width: "100%", marginBottom: 10 }}
 				/>
 			)}
+
+			<div style={{ display: "flex", flexDirection: "column", gap: 6, marginBottom: 10 }}>
+				<span style={{ fontWeight: 500 }}>Add model</span>
+				<VSCodeTextField
+					onInput={(event) => setAddedModelId((event.target as HTMLInputElement).value)}
+					placeholder="Model ID"
+					value={addedModelId}
+				/>
+				<VSCodeTextField
+					onInput={(event) => setAddedModelName((event.target as HTMLInputElement).value)}
+					placeholder="Name"
+					value={addedModelName}
+				/>
+				<VSCodeButton
+					disabled={isAddingModel || !addedModelId.trim() || !addedModelName.trim()}
+					onClick={() => void addModel()}>
+					Add model
+				</VSCodeButton>
+				{addModelError && <p style={{ color: "var(--vscode-errorForeground)", margin: 0 }}>{addModelError}</p>}
+			</div>
 
 			{/* OpenAI Compatible Custom Headers */}
 			{(() => {

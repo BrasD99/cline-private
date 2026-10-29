@@ -8,6 +8,7 @@ export function AddOpenAiConnectionForm({ onAdded }: { onAdded: (providerId: str
 	const [baseUrl, setBaseUrl] = useState("")
 	const [apiKey, setApiKey] = useState("")
 	const [modelId, setModelId] = useState("")
+	const [modelName, setModelName] = useState("")
 	const [error, setError] = useState("")
 	const [pending, setPending] = useState(false)
 
@@ -21,12 +22,14 @@ export function AddOpenAiConnectionForm({ onAdded }: { onAdded: (providerId: str
 					baseUrl,
 					apiKey,
 					modelId,
+					modelName,
 				}),
 			)
 			setName("")
 			setBaseUrl("")
 			setApiKey("")
 			setModelId("")
+			setModelName("")
 			onAdded(response.value)
 		} catch (err) {
 			setError(err instanceof Error ? err.message : String(err))
@@ -59,7 +62,14 @@ export function AddOpenAiConnectionForm({ onAdded }: { onAdded: (providerId: str
 				placeholder="Model ID"
 				value={modelId}
 			/>
-			<VSCodeButton disabled={pending || !name.trim() || !baseUrl.trim() || !modelId.trim()} onClick={() => void submit()}>
+			<VSCodeTextField
+				onInput={(event) => setModelName((event.target as HTMLInputElement).value)}
+				placeholder="Model name"
+				value={modelName}
+			/>
+			<VSCodeButton
+				disabled={pending || !name.trim() || !baseUrl.trim() || !modelId.trim() || !modelName.trim()}
+				onClick={() => void submit()}>
 				Add connection
 			</VSCodeButton>
 			{error && <p style={{ color: "var(--vscode-errorForeground)", margin: 0 }}>{error}</p>}

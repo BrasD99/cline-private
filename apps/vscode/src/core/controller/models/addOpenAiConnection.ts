@@ -3,6 +3,7 @@ import { String } from "@shared/proto/cline/common"
 import { AddOpenAiConnectionRequest } from "@shared/proto/cline/models"
 import { getProviderSettingsManager } from "@/sdk/provider-migration"
 import { Controller } from ".."
+import { saveOpenAiModel } from "./saveOpenAiModel"
 
 function connectionId(name: string): string {
 	const base = name
@@ -20,8 +21,9 @@ export async function addOpenAiConnection(controller: Controller, request: AddOp
 	const name = request.name.trim()
 	const baseUrl = request.baseUrl.trim().replace(/\/+$/, "")
 	const modelId = request.modelId.trim()
-	if (!name || !baseUrl || !modelId) {
-		throw new Error("Name, base URL, and model id are required")
+	const modelName = request.modelName.trim()
+	if (!name || !baseUrl || !modelId || !modelName) {
+		throw new Error("Name, base URL, model id, and model name are required")
 	}
 	const providerId = connectionId(name)
 	await addLocalProvider(getProviderSettingsManager(), {
@@ -34,6 +36,7 @@ export async function addOpenAiConnection(controller: Controller, request: AddOp
 		defaultModelId: modelId,
 		capabilities: ["tools"],
 	})
+	saveOpenAiModel(providerId, modelId, modelName)
 	controller.invalidateProviderListings()
 	return String.create({ value: providerId })
 }
